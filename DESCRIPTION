@@ -1,0 +1,24 @@
+Encoding: UTF-8
+Package: factorstochvol
+Type: Package
+Title: Bayesian Estimation of (Sparse) Latent Factor Stochastic
+        Volatility Models
+Version: 0.8.1
+Authors@R: person("Gregor", "Kastner", role = c("aut", "cre"),
+                  email = "gregor.kastner@wu.ac.at")
+Maintainer: Gregor Kastner <gregor.kastner@wu.ac.at>
+Description: Markov chain Monte Carlo (MCMC) sampler for fully Bayesian
+             estimation of latent factor stochastic volatility models.
+             Sparsity can be achieved through the usage of Normal-Gamma priors
+             on the factor loading matrix.
+License: GPL (>= 2)
+Depends: R (>= 3.0.2)
+Imports: stochvol (>= 1.3.0), GIGrvg (>= 0.3), Rcpp (>= 0.11),
+        corrplot, methods, grDevices, graphics, stats, utils
+LinkingTo: Rcpp, RcppArmadillo (>= 0.4), stochvol
+RoxygenNote: 5.0.1
+NeedsCompilation: yes
+Packaged: 2016-08-31 04:40:38 UTC; dejot
+Author: Gregor Kastner [aut, cre]
+Repository: CRAN
+Date/Publication: 2016-08-31 08:39:52
