@@ -32,7 +32,7 @@ citEntry(header = "To refer to the interweaving (ASIS) methodology used in facto
          eprinttype  = "arXiv",
          eprintclass = "stat.CO",
          eprint      = "1602.08154",
-         textVersion = "Kastner, G., S. Frühwirth-Schnatter, H. F. Lopes (2016). Efficient Bayesian Inference for Multivariate Factor Stochastic Volatility Models. URL: http://arxiv.org/abs/1602.08154."
+         textVersion = "Kastner, G., S. Frühwirth-Schnatter, H. F. Lopes (2016). Efficient Bayesian inference for multivariate factor stochastic volatility models. URL: http://arxiv.org/abs/1602.08154."
 )
 
 citEntry(header = "To refer to the shrinkage methodology used in factorstochvol please cite:",

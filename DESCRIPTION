@@ -3,7 +3,7 @@ Package: factorstochvol
 Type: Package
 Title: Bayesian Estimation of (Sparse) Latent Factor Stochastic
         Volatility Models
-Version: 0.8.1
+Version: 0.8.2
 Authors@R: person("Gregor", "Kastner", role = c("aut", "cre"),
                   email = "gregor.kastner@wu.ac.at")
 Maintainer: Gregor Kastner <gregor.kastner@wu.ac.at>
@@ -18,7 +18,7 @@ Imports: stochvol (>= 1.3.0), GIGrvg (>= 0.3), Rcpp (>= 0.11),
 LinkingTo: Rcpp, RcppArmadillo (>= 0.4), stochvol
 RoxygenNote: 5.0.1
 NeedsCompilation: yes
-Packaged: 2016-08-31 04:40:38 UTC; dejot
+Packaged: 2016-09-20 09:41:33 UTC; dejot
 Author: Gregor Kastner [aut, cre]
 Repository: CRAN
-Date/Publication: 2016-08-31 08:39:52
+Date/Publication: 2016-09-20 13:01:48

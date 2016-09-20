@@ -663,7 +663,8 @@ if (!is.numeric(runningstoremoments) || length(runningstoremoments) != 1 || runn
  }
  
  ## Hack to prevent console flushing problems with Windows
- if (.Platform$OS.type != "unix") myquiet <- TRUE else myquiet <- quiet
+ #if (.Platform$OS.type != "unix") myquiet <- TRUE else myquiet <- quiet
+ myquiet <- quiet
 
 
 if (is.matrix(restrict)) {
@@ -691,8 +692,7 @@ startval <- list(facload = startfacload,
 
 auxstore <- FALSE
 
- runtime <- system.time(res <-
-  .Call("sampler", t(y), draws, burnin, startval,
+res <- .Call("sampler", t(y), draws, burnin, startval,
        	priormu[1], priormu[2]^2, priorphi, priorsigma,
 	shrinkagepriors,
        	thin, auxstore, thintime, myquiet, para,
@@ -701,11 +701,11 @@ auxstore <- FALSE
 	restr, interweaving, signswitch, runningstore,
 	runningstorethin, runningstoremoments, columnwise,
 	heteroskedastic, priorhomoskedastic, priorh0,
-	PACKAGE = "factorstochvol"))
+	PACKAGE = "factorstochvol")
 
- res$y <- y
+res$y <- y
 
- res$config <- list(draws = draws, burnin = burnin, thin = thin,
+res$config <- list(draws = draws, burnin = burnin, thin = thin,
 		    keeptime = keeptime, runningstore = runningstore,
 		    runningstorethin = runningstorethin,
 		    runningstoremoments = runningstoremoments,

@@ -56,6 +56,6 @@ pairs(t(preddraws), col = rgb(0,0,0,.1), pch = 16)
 Other predictors: \code{\link{predcor}},
   \code{\link{predcov}}, \code{\link{predh}},
   \code{\link{predloglikWB}}, \code{\link{predloglik}},
-  \code{\link{predprecision}}
+  \code{\link{predprecWB}}
 }
 

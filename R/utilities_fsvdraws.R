@@ -434,7 +434,7 @@ predcor <- function(x, ahead = 1, each = 1) {
 
 #' Predicts precision matrix and its determinant (Woodbury variant)
 #'
-#' \code{predprecision} simulates from the posterior predictive distribution
+#' \code{predprecWB} simulates from the posterior predictive distribution
 #' of the model-implied precision matrix and its determinant
 #' using the Woodbury matrix identity and the matrix determinant lemma
 #'
@@ -461,11 +461,11 @@ predcor <- function(x, ahead = 1, each = 1) {
 #' 
 #' @seealso Usually used for evaluating the predictive likelihood when many
 #' series but few factors are used, see
-#' \code{\link{predloglik}}.
+#' \code{\link{predloglik}} and \code{\link{predloglikWB}}.
 #'
 #' @export
 
-predprecision <- function(x, ahead = 1, each = 1) {
+predprecWB <- function(x, ahead = 1, each = 1) {
  pred <- predh(x, ahead, each)
  m <- ncol(x$y)
  r <- nrow(x$f)
@@ -521,6 +521,8 @@ predprecision <- function(x, ahead = 1, each = 1) {
 #' @param each Single integer (or coercible to such) indicating how
 #' often should be drawn from the posterior predictive distribution
 #' for each draw that has been stored during MCMC sampling.
+#' @param alldraws Should all the draws be returned or just the final results?
+#' (Can be useful to assess convergence.)
 #'
 #' @return Vector of length \code{length(ahead)} with log predictive
 #' likelihoods.
@@ -538,7 +540,7 @@ predprecision <- function(x, ahead = 1, each = 1) {
 #' # Evaluate the 1, 10, and 100 days ahead predictive log
 #' # likelihood:
 #' ahead <- c(1, 10, 100)
-#' scores <- predloglik(y[1000+ahead,], res, ahead = ahead, each = 10)
+#' scores <- predloglik(res, y[1000+ahead,], ahead = ahead, each = 10)
 #' print(scores)
 #' }
 #'
@@ -550,7 +552,7 @@ predprecision <- function(x, ahead = 1, each = 1) {
 #'
 #' @export
 
-predloglik <- function(y, x, ahead = 1, each = 1) {
+predloglik <- function(x, y, ahead = 1, each = 1, alldraws = FALSE) {
  predobj <- predcov(x, ahead, each)
  m <- ncol(x$y)
  r <- nrow(x$f)
@@ -567,7 +569,11 @@ predloglik <- function(y, x, ahead = 1, each = 1) {
   numericnormalizer <- max(ret[,i]) - 700 # exp(700) should be fine as double
   realret[i] <- log(mean(exp(ret[,i] - numericnormalizer))) + numericnormalizer
  }
- realret
+ if (all(isTRUE(alldraws))) {
+  return(list(predloglik = realret, predloglikdraws = ret))
+ } else {
+  return(realret)
+ }
 }
 
 
@@ -578,15 +584,17 @@ predloglik <- function(y, x, ahead = 1, each = 1) {
 #' corresponding matrix determinant lemma. This is recommended only
 #' if many series and few factors are present.
 #'
-#' @param y Matrix of dimension \code{length(ahead)} times \code{m} where the
-#' predictive density should be evaluated.
 #' @param x Object of class \code{'fsvdraws'}, usually resulting from a call
 #' to \code{\link{fsvsample}}.
+#' @param y Matrix of dimension \code{length(ahead)} times \code{m} where the
+#' predictive density should be evaluated.
 #' @param ahead Vector of timepoints, indicating how many steps
 #' to predict ahead.
 #' @param each Single integer (or coercible to such) indicating how
 #' often should be drawn from the posterior predictive distribution
 #' for each draw that has been stored during MCMC sampling.
+#' @param alldraws Should all the draws be returned or just the final results?
+#' (Can be useful to assess convergence.)
 #'
 #' @return Vector of length \code{length(ahead)} with log predictive
 #' likelihoods.
@@ -604,7 +612,7 @@ predloglik <- function(y, x, ahead = 1, each = 1) {
 #' # Evaluate the 1, 10, and 100 days ahead predictive log
 #' # likelihood:
 #' ahead <- c(1, 10, 100)
-#' scores <- predloglikWB(y[1000+ahead,], res, ahead = ahead, each = 10)
+#' scores <- predloglikWB(res, y[1000+ahead,], ahead = ahead, each = 10)
 #' print(scores)
 #' }
 #'
@@ -613,14 +621,14 @@ predloglik <- function(y, x, ahead = 1, each = 1) {
 #'
 #' @family predictors
 #' 
-#' @seealso Uses \code{\link{predprecision}}. If \code{m} is small
+#' @seealso Uses \code{\link{predprecWB}}. If \code{m} is small
 #' or many factors are used, consider also using
 #' \code{\link{predcov}}.
 #'
 #' @export
 
-predloglikWB <- function(y, x, ahead = 1, each = 1) {
- covinvdet <- predprecision(x, ahead, each)
+predloglikWB <- function(x, y, ahead = 1, each = 1, alldraws = FALSE) {
+ covinvdet <- predprecWB(x, ahead, each)
  m <- ncol(x$y)
  r <- nrow(x$f)
  if (!is.numeric(y) || !is.matrix(y) || ncol(y) != m || nrow(y) != length(ahead))
@@ -640,7 +648,11 @@ predloglikWB <- function(y, x, ahead = 1, each = 1) {
   numericnormalizer <- max(ret[,i]) - 700 # exp(700) should be fine as double
   realret[i] <- log(mean(exp(ret[,i] - numericnormalizer))) + numericnormalizer
  }
- realret
+ if (all(isTRUE(alldraws))) {
+  return(list(predloglik = realret, predloglikdraws = ret))
+ } else {
+  return(realret)
+ }
 }
 
 
@@ -757,14 +769,15 @@ signident <- function(x, method = "maximin", implementation = 3) {
   distance <- rep(NA_real_, r)
 
   for (i in 1:r) {
+   faccol <- matrix(x$facload[,i,,drop=FALSE], nrow = nrow(x$facload))
    if (method == "maximin") { # for each factor, look for the series where the
                               # minimum absolute loadings are biggest
-    identifier[i] <- which.max(apply(abs(x$facload[,i,]), 1, min))
+    identifier[i] <- which.max(apply(abs(faccol), 1, min))
    }
 
-   distance[i] <- max(apply(abs(x$facload[,i,]), 1, min))
-   mysig <- sign(x$facload[identifier[i],i,])
-   x$facload[,i,] <- t(t(x$facload[,i,]) * mysig)
+   distance[i] <- max(apply(abs(faccol), 1, min))
+   mysig <- sign(faccol[identifier[i],])
+   x$facload[,i,] <- t(t(faccol) * mysig)
    if (implementation == 1) {
     x$f[i,,] <- x$f[i,,] * rep(mysig, each = ftpoints)
    } else if (implementation == 2) {

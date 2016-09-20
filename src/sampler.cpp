@@ -550,14 +550,16 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
   }
  }
 
- int space4print = floor(log10(abs(N))) + 1;
- int doevery = ceil((1000.*N)/((r+1)*T*m));
+ int space4print = floor(log10(N + .1)) + 1;
+ int doevery = ceil((2000.*N)/((r+1)*T*m));
 
  for (int i = 0; i < N; i++, effi++) {  // BEGIN main MCMC loop
   
   if (verbose && (i % doevery == 0)) {
-   Rprintf("\r********* Iteration %*i of %*i (%3.0f\045) *********",
+   Rprintf("\r********* Iteration %*i of %*i (%3.0f%%) *********",
     space4print, i+1, space4print, N, 100.*(i+1)/N);
+   R_FlushConsole();
+   R_ProcessEvents();
   }
 
   // "linearized residuals"
@@ -972,7 +974,7 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  }  // END main MCMC loop
 
  if (verbose) {
-   Rprintf("\r********* Iteration %*i of %*i (%3.0f\045) *********",
+   Rprintf("\r********* Iteration %*i of %*i (%3.0f%%) *********",
     space4print, N, space4print, N, 100.);
  }
  

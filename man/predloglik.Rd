@@ -5,14 +5,14 @@
 \title{Evaluates the predictive log likelihood using the predicted
 covariance matrix}
 \usage{
-predloglik(y, x, ahead = 1, each = 1)
+predloglik(x, y, ahead = 1, each = 1, alldraws = FALSE)
 }
 \arguments{
-\item{y}{Matrix of dimension \code{length(ahead)} times \code{m} where the
-predictive density should be evaluated.}
-
 \item{x}{Object of class \code{'fsvdraws'}, usually resulting from a call
 to \code{\link{fsvsample}}.}
+
+\item{y}{Matrix of dimension \code{length(ahead)} times \code{m} where the
+predictive density should be evaluated.}
 
 \item{ahead}{Vector of timepoints, indicating how many steps
 to predict ahead.}
@@ -20,6 +20,9 @@ to predict ahead.}
 \item{each}{Single integer (or coercible to such) indicating how
 often should be drawn from the posterior predictive distribution
 for each draw that has been stored during MCMC sampling.}
+
+\item{alldraws}{Should all the draws be returned or just the final results?
+(Can be useful to assess convergence.)}
 }
 \value{
 Vector of length \code{length(ahead)} with log predictive
@@ -45,7 +48,7 @@ res <- fsvsample(y[seq_len(1000),], factors = 1)
 # Evaluate the 1, 10, and 100 days ahead predictive log
 # likelihood:
 ahead <- c(1, 10, 100)
-scores <- predloglik(y[1000+ahead,], res, ahead = ahead, each = 10)
+scores <- predloglik(res, y[1000+ahead,], ahead = ahead, each = 10)
 print(scores)
 }
 
@@ -58,6 +61,6 @@ but only few factors are used, consider also using
 Other predictors: \code{\link{predcond}},
   \code{\link{predcor}}, \code{\link{predcov}},
   \code{\link{predh}}, \code{\link{predloglikWB}},
-  \code{\link{predprecision}}
+  \code{\link{predprecWB}}
 }
 

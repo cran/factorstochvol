@@ -1,3 +1,12 @@
+Changes in version 0.8.2
+  - The function predprecision is now called predprecWB.
+  - The first two arguments of predloglik and predloglikWB were interchanced.
+  - Fixed ambiguity of type casting for log10() in sampler.cpp (needed to
+    compile on Solaris).
+  - Turned on progress indicator also for Windows.
+  - Fixed signident to work also for 1 single MCMC draw.
+  - Minor fixes in CITATION.
+
 Changes in version 0.8.1
   - First CRAN release version.
   - It is now possible to have arbitrary loadings restrictions. Thanks to

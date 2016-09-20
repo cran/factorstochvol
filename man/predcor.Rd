@@ -55,6 +55,6 @@ lines(density(predobj[1,2,,"100"], adjust = 2), col = 3)
 Other predictors: \code{\link{predcond}},
   \code{\link{predcov}}, \code{\link{predh}},
   \code{\link{predloglikWB}}, \code{\link{predloglik}},
-  \code{\link{predprecision}}
+  \code{\link{predprecWB}}
 }
 
