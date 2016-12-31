@@ -54,6 +54,8 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  // 2 = "deep interweaving" (diagonal element)
  // 3 = "shallow interweaving" (largest |element|)
  // 4 = "deep interweaving" (largest |element|)
+ // 5 = "shallow interweaving" (random element)
+ // 6 = "deep interweaving" (random element)
  
  const int interweaving       = as<int>(interweaving_in);
 
@@ -121,7 +123,7 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
 // NumericMatrix curhtilde2(curh.nrow(), r);
 // arma::mat armahtilde2(curhtilde2.begin(), curhtilde2.nrow(), curhtilde2.ncol(), false);
  
- NumericVector curh0(mpr);
+ NumericVector curh0 = startval["latent0"];
  arma::vec armah0(curh0.begin(), curh0.length(), false);
  
  //current parameter draws
@@ -461,7 +463,7 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  tau2.attr("dim") = Dimension(curtau2.nrow(), curtau2.ncol(), auxstoresize);
  
  // h0 holds the initival latent log-volatilities
- NumericMatrix h0(curh0.length(), auxstoresize);
+ NumericMatrix h0(curh0.length(), draws/thin);
  
  // para holds the parameter draws (mu, phi, sigma)
  NumericVector para(3 * mpr * (draws/thin));
@@ -558,8 +560,6 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
   if (verbose && (i % doevery == 0)) {
    Rprintf("\r********* Iteration %*i of %*i (%3.0f%%) *********",
     space4print, i+1, space4print, N, 100.*(i+1)/N);
-   R_FlushConsole();
-   R_ProcessEvents();
   }
 
   // "linearized residuals"
@@ -723,7 +723,7 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  //Rprintf("\n\n");
  //for (int is = 0; is < m; is++) Rprintf("%f %f\n", curfacload(is, 0), curfacload(is, 1));
 
-  if (interweaving == 1 || interweaving == 3) {
+  if (interweaving == 1 || interweaving == 3 || interweaving == 5 || interweaving == 7) {
   // STEP 2*: "Shallow" Interweaving
   
 //   // intermediate step: calculate transformation of curh
@@ -733,10 +733,17 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
    for (int j = 0; j < r; j++) {
     
     int userow = j;
-    if (interweaving >= 3) { // find largest absolute element in column to interweave
+    if (interweaving == 3 || interweaving == 7) { // find largest absolute element in column to interweave
      userow = 0;
      for (int k = 1; k < m; k++) if (fabs(armafacload(k, j)) > fabs(armafacload(userow, j))) userow = k;
     }
+    if (interweaving == 5) { // find random nonzero element in column to interweave
+     for (int k = 1; k < m; k++) {
+      userow = floor(R::runif(0, m));
+      if (fabs(armafacload(userow, j)) > 0.01) break;
+     }
+    }
+
      
     double newdiag2 = do_rgig1((nonzerospercol(j)- T) / 2.,
        sum(square(armaf.row(j) * armafacload(userow,j))/exp(armah.col(m+j)).t()),
@@ -749,14 +756,22 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
    }
   }
 
-  if (interweaving == 2 || interweaving == 4) { // STEP 2+: "Deep" Interweaving 
+  if (interweaving == 2 || interweaving == 4 || interweaving == 6 || interweaving == 7) { // STEP 2+: "Deep" Interweaving 
    for (int j = 0; j < r; j++) {
 
     int userow = j;
-    if (interweaving >= 3) { // find largest absolute element in column to interweave
+    if (interweaving == 4 || interweaving == 7) { // find largest absolute element in column to interweave
      userow = 0;
      for (int k = 1; k < m; k++) if (fabs(armafacload(k, j)) > fabs(armafacload(userow, j))) userow = k;
     }
+    if (interweaving == 6) { // find random nonzero element in column to interweave
+     for (int k = 1; k < m; k++) {
+      userow = floor(R::runif(0, m));
+      if (fabs(armafacload(userow, j)) > 0.01) break;
+     }
+      //Rprintf("use: %i ", userow);
+    }
+
 
     //Rprintf("%i and %i\n", j, userow);
 
@@ -808,15 +823,18 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
 
     //ACCEPT/REJECT
     if (log(as<double>(runif(1))) < logacceptrate) {
-    //Rprintf("ACCEPT!\n");
+//    Rprintf("ACC col %i el %02i - ", j+1, userow+1);
      curh(_, m+j) = hopen - mu_prop;
      curh0(m+j) = h0open - mu_prop;
 
      double tmp = exp(mu_prop/2)/armafacload(userow,j);
      armafacload.col(j) *= tmp;
      armaf.row(j) *= 1/tmp;
-    } 
+//    } else {
+//     Rprintf("REJ col %i el %02i - ", j+1, userow+1);
+    }
    }
+//   Rprintf("\n");
   }
   // STEP 3:
   // update the factors (T independent r-variate regressions with m observations)

@@ -29,6 +29,9 @@ covmat <- function(x, ...) {
 #'  (number of component series) columns.
 #' @param demean Logical value indicating whether the data should
 #' be de-meaned.
+#' @param standardize Logical value indicating whether the data should
+#' be standardized (in the sense that each component series has an empirical
+#' variance equal to one).
 #' @param ... Ignored.
 #'
 #' @return Matrix containing the log returns of the (de-meaned)
@@ -38,6 +41,6 @@ covmat <- function(x, ...) {
 #'
 #' @export
 
-logret <- function(dat, demean = FALSE, ...) {
+logret <- function(dat, demean = FALSE, standardize = FALSE, ...) {
  UseMethod("logret")
 }

@@ -10,26 +10,30 @@
 #' @param y Data matrix. Each of \code{m} rows is assumed to contain a single
 #' (univariate) series of length \code{n}.
 #'
+#' @param factors Number of latent factors to be estimated.
+#'
 #' @param draws Number of MCMC draws kept after burn-in.
 #'
 #' @param burnin Number of initial MCMC draws to be discarded.
 #'
-#' @param factors Number of latent factors to be estimated.
-#'
 #' @param priormu Vector of length 2 denoting prior mean and standard deviation
-#' for unconditional levels of the log-volatility processes.
+#' for unconditional levels of the idiosyncratic log-variance processes.
 #'
-#' @param priorphi Vector of length 4, indicating the shape parameters for the
+#' @param priorphiidi Vector of length 2, indicating the shape parameters for the
 #' Beta prior distributions of the transformed parameters \code{(phi+1)/2}, where
-#' \code{phi} denotes the persistence of the log-variances The first two
-#' elements of \code{priorphi} are interpreted to belong to the idiosyncratic
-#' series, the third and fourth element of \code{priorphi} are interpreted to
-#' belong to the latent factors.
+#' \code{phi} denotes the persistence of the idiosyncratic log-variances.
 #'
-#' @param priorsigma Vector of length \code{m + factors} containing the
-#' prior volatilities of log-variances Note: If \code{priorsigma} has exactly
-#' two elements, the first one will be recycled for all idiosyncratic series and
-#' the second one will be recycled for all latent factors.
+#' @param priorphifac Vector of length 2, indicating the shape parameters for the
+#' Beta prior distributions of the transformed parameters \code{(phi+1)/2}, where
+#' \code{phi} denotes the persistence of the factor log-variances.
+#'
+#' @param priorsigmaidi Vector of length \code{m} containing the
+#' prior volatilities of log-variances. If \code{priorsigmaidi} has exactly
+#' one element, it will be recycled for all idiosyncratic log-variances.
+#'
+#' @param priorsigmafac Vector of length \code{factors} containing the
+#' prior volatilities of log-variances. If \code{priorsigmafac} has exactly
+#' one element, it will be recycled for all factor log-variances.
 #'
 #' @param priorfacload Either a matrix of dimensions \code{m} times \code{factors}
 #' with nonnegative elements or a single number. If a matrix is provided, its
@@ -43,22 +47,30 @@
 #' hyperprior's hyperhyperparameters \code{c} and \code{d}.
 #'
 #' @param columnwise Set to \code{TRUE} if you want to use column-wise shrinkage
-#' and to \code{FALSE} for row-wise shrinkage. For details please see the paper by
-#' Kastner et al. (2016).
+#' and to \code{FALSE} for row-wise shrinkage. For details please see the paper
+#' by Kastner et al. (2016).
 #'
-#' @param priorh0 Vector of length 1, 2, or \code{m + factors}, containing
-#' information about the Gaussian prior for the initial log-variances The
-#' first \code{m} elements are used for the idiosyncratic log-variances, the
-#' last \code{factors} elements are used for the factor log-variances
-#' If an element of \code{priorh0} is a nonnegative number, the conditional
-#' prior of the corresponding initial log-volatility h0 is assumed to be Gaussian
-#' with mean 0 and standard deviation priorh0 time sigma. If an element of
-#' \code{priorh0} is the string 'stationary', the prior of the corresponding
+#' @param priorh0idi Vector of length 1 or \code{m}, containing
+#' information about the Gaussian prior for the initial idiosyncratic
+#' log-variances.
+#' If an element of \code{priorh0idi} is a nonnegative number, the conditional
+#' prior of the corresponding initial log-variance h0 is assumed to be Gaussian
+#' with mean 0 and standard deviation \code{priorh0idi} times $sigma$.
+#' If an element of
+#' \code{priorh0idi} is the string 'stationary', the prior of the corresponding
 #' initial log volatility is taken to be from the stationary distribution, i.e.
 #' h0 is assumed to be Gaussian with mean 0 and variance $sigma^2/(1-phi^2)$.
-#' If \code{priorh0} is of length 2 it will be recycled accordingly, whereby
-#' the first element is used for all idiosyncratic log-variances and the
-#' second element is used for all factor log-variances.
+#'
+#' @param priorh0fac Vector of length 1 or \code{factors}, containing
+#' information about the Gaussian prior for the initial factor
+#' log-variances.
+#' If an element of \code{priorh0fac} is a nonnegative number, the conditional
+#' prior of the corresponding initial log-variance h0 is assumed to be Gaussian
+#' with mean 0 and standard deviation \code{priorh0fac} times $sigma$.
+#' If an element of
+#' \code{priorh0fac} is the string 'stationary', the prior of the corresponding
+#' initial log volatility is taken to be from the stationary distribution, i.e.
+#' h0 is assumed to be Gaussian with mean 0 and variance $sigma^2/(1-phi^2)$.
 #'
 #' @param thin Single number greater or equal to 1, coercible to integer.
 #' Every \code{thin}th MCMC draw is kept and returned. The default value
@@ -104,12 +116,15 @@
 #' informative output during sampling should be omitted. The default
 #' value is \code{FALSE}, implying verbose output.
 #'
-#' @param restrict Either "upper" or "none", indicating whether the factor loadings
-#' matrix should be restricted to have zeros above the diagonal ("upper") or
-#' whether all elements should be estimated from the data ("none"). Setting
-#' \code{restrict} to "upper" often stabilizes MCMC
+#' @param restrict Either "upper", "none", or "auto", indicating whether
+#' the factor loadings
+#' matrix should be restricted to have zeros above the diagonal ("upper"), 
+#' whether all elements should be estimated from the data ("none"), or
+ #' whether the function \code{\link{findrestrict}} should be invoked for a
+#' priori finding suitable zeros. Setting
+#' \code{restrict} to "upper" or "auto" often stabilizes MCMC
 #' estimation and can be important for identifying the factor loadings matrix,
-#' however, it imposes a dependence on how the data are ordered. Setting
+#' however, it generally is a strong prior assumption. Setting
 #' \code{restrict} to "none" is usually the preferred option if identification
 #' of the factor loadings matrix is of less concern but covariance estimation
 #' or prediction is the goal. Alternatively, \code{restrict} can be a
@@ -196,6 +211,10 @@
 #' \code{c(n, m + factors)}, containing the starting values of the
 #' latent log-variances.
 #'
+#' @param startlatent0 \emph{optional} numeric vector of length
+#' \code{m + factors}, containing the starting values of the initial latent
+#' log-variances.
+#'
 #' @param startfacload \emph{optional} numeric matrix of dimension
 #' \code{c(m, factors)}, containing the starting values of the
 #' factor loadings.
@@ -273,18 +292,25 @@
 #'
 #' @export
 
-fsvsample <- function(y, draws = 1000, burnin = 100, factors = 1,
-		      priormu = c(0, 10), priorphi = c(10, 3, 3, 3),
-		      priorsigma = 1, priorfacload = 1, priorng = c(1, 1),
-                      columnwise = FALSE, priorh0 = c("stationary", 1), thin = 1,
+fsvsample <- function(y, factors = 1, draws = 1000, burnin = 1000, 
+		      priormu = c(0, 10),
+		      priorphiidi = c(10, 3), priorphifac = c(10, 3),
+		      priorsigmaidi = 1, priorsigmafac = 1,
+		      priorfacload = 1,
+		      priorng = c(1, 1),
+                      columnwise = FALSE, 
+		      priorh0idi = "stationary",
+		      priorh0fac = "stationary",
+		      thin = 1,
 		      keeptime = "last", runningstore = 1,
-		      runningstorethin = 1, runningstoremoments = 2,
-		      quiet = FALSE, restrict = "upper", interweaving = 4,
+		      runningstorethin = 10, runningstoremoments = 2,
+		      quiet = FALSE, restrict = "auto", interweaving = 4,
 		      signswitch = FALSE, 
 		      heteroskedastic = TRUE,
 		      priorhomoskedastic = NA,
 		      expert,
-		      startpara, startlatent, startfacload, startfac) {
+		      startpara, startlatent, startlatent0,
+		      startfacload, startfac) {
  
  # Some error checking for y
  if (is(y, "fsvsim")) {
@@ -335,14 +361,24 @@ fsvsample <- function(y, draws = 1000, burnin = 100, factors = 1,
   burnin <- as.integer(burnin)
  }
  
- # Some error checking for priorh0
- if (length(priorh0) == 1) priorh0 <- rep(priorh0, m + factors)
- if (length(priorh0) == 2) priorh0 <- c(rep(priorh0[1], m), rep(priorh0[2], factors))
- if (length(priorh0) != m + factors) stop("Argument 'priorh0' must be of length 1 or (ncol(y) + factors).")
- priorh0[remember <- priorh0 == "stationary"] <- -1
- priorh0[!remember] <- as.numeric(priorh0[!remember])^2
- priorh0 <- as.numeric(priorh0)
- if (any(priorh0[!remember] < 0)) stop("Argument 'priorh0' must not contain negative values.")
+ # Some error checking for priorh0idi
+ if (length(priorh0idi) == 1) priorh0idi <- rep(priorh0idi, m)
+ if (length(priorh0idi) != m) stop("Argument 'priorh0idi' must be of length 1 or ncol(y).")
+ priorh0idi[remember <- priorh0idi == "stationary"] <- -1
+ priorh0idi[!remember] <- as.numeric(priorh0idi[!remember])^2
+ priorh0idi <- as.numeric(priorh0idi)
+ if (any(priorh0idi[!remember] < 0)) stop("Argument 'priorh0idi' must not contain negative values.")
+
+ # Some error checking for priorh0fac
+ if (length(priorh0fac) == 1) priorh0fac <- rep(priorh0fac, factors)
+ if (length(priorh0fac) != factors) stop("Argument 'priorh0fac' must be of length 1 or factors.")
+ priorh0fac[remember <- priorh0fac == "stationary"] <- -1
+ priorh0fac[!remember] <- as.numeric(priorh0fac[!remember])^2
+ priorh0fac <- as.numeric(priorh0fac)
+ if (any(priorh0fac[!remember] < 0)) stop("Argument 'priorh0fac' must not contain negative values.")
+
+ priorh0 <- c(priorh0idi, priorh0fac)
+
 
 if (is.numeric(interweaving) && length(interweaving) == 1) {
  interweaving <- as.integer(interweaving)
@@ -350,7 +386,7 @@ if (is.numeric(interweaving) && length(interweaving) == 1) {
  stop("Argument 'interweaving' must contain a single numeric value.")
 }
 
-if (interweaving != 0 & interweaving != 1 & interweaving != 2 & interweaving != 3 & interweaving != 4) {
+if (interweaving != 0 & interweaving != 1 & interweaving != 2 & interweaving != 3 & interweaving != 4 & interweaving != 5 & interweaving != 6 & interweaving != 7) {
  stop("Argument 'interweaving' must be one of: 0, 1, 2, 3, 4.")
 }
 
@@ -385,33 +421,48 @@ if (interweaving != 0 & interweaving != 1 & interweaving != 2 & interweaving != 
   stop("Argument 'priormu' (mean and sd for the Gaussian prior for mu) must be numeric and of length 2.")
  }
  
- if (length(priorphi) == 2) priorphi <- c(priorphi, priorphi)
- 
- if (!is.numeric(priorphi) | length(priorphi) != 4) {
-  stop("Argument 'priorphi' (shape1 and shape2 parameters for the Beta prior for (phi+1)/2) must be numeric and of length 2 or 4.")
+ if (!is.numeric(priorphiidi) | length(priorphiidi) != 2) {
+  stop("Argument 'priorphiidi' (shape1 and shape2 parameters for the Beta prior for (phi+1)/2) must be numeric and of length 2.")
  }
  
- if (!is.numeric(priorsigma) | any(priorsigma <= 0)) {
-  stop("Argument 'priorsigma' (scaling of the chi-squared(df = 1) prior for sigma^2) must be numeric and > 0.")
+ if (!is.numeric(priorphifac) | length(priorphifac) != 2) {
+  stop("Argument 'priorphifac' (shape1 and shape2 parameters for the Beta prior for (phi+1)/2) must be numeric and of length 2.")
  }
 
- if (length(priorsigma) == 1) {
-  priorsigma <- rep(priorsigma, factors + m)
- } else if (length(priorsigma) == 2) {
-  priorsigma <- c(rep(priorsigma[1], m), rep(priorsigma[2], factors))
- } else if (length(priorsigma) == factors + m) {
-  priorsigma <- priorsigma
+ priorphi <- c(priorphiidi, priorphifac)
+ 
+ if (!is.numeric(priorsigmaidi) | any(priorsigmaidi <= 0)) {
+  stop("Argument 'priorsigmaidi' (scaling of the chi-squared(df = 1) prior for sigma^2) must be numeric and > 0.")
+ }
+
+ if (length(priorsigmaidi) == 1) {
+  priorsigmaidi <- rep(priorsigmaidi, m)
+ } else if (length(priorsigmaidi) == m) {
+  priorsigmaidi <- priorsigmaidi
  } else {
-  stop("Argument 'priorsigma' (scaling of the chi-squared(df = 1) prior for sigma^2) must of length 1, 2, or (factors + ncol(y)).")
+  stop("Argument 'priorsigmaidi' (scaling of the chi-squared(df = 1) prior for sigma^2) must of length 1 or ncol(y).")
  }
 
+ if (!is.numeric(priorsigmafac) | any(priorsigmafac <= 0)) {
+  stop("Argument 'priorsigmaidi' (scaling of the chi-squared(df = 1) prior for sigma^2) must be numeric and > 0.")
+ }
+
+ if (length(priorsigmafac) == 1) {
+  priorsigmafac <- rep(priorsigmafac, m)
+ } else if (length(priorsigmafac) == m) {
+  priorsigmafac <- priorsigmafac
+ } else {
+  stop("Argument 'priorsigmafac' (scaling of the chi-squared(df = 1) prior for sigma^2) must of length 1 or factors.")
+ }
+
+ priorsigma <- c(priorsigmaidi, priorsigmafac)
+ 
  if (!is.numeric(priorng) || length(priorng) != 2 || any(priorng <= 0)) {
   stop("Argument 'priorng' (prior hyperhyperparameters for Normal-Gamma prior) must be numeric and of length 2.")
  }
 
  cShrink <- priorng[1]
  dShrink <- priorng[2]
-
  
  if(!is.numeric(priorfacload)) {
   stop("Argument 'priorfacload' must be numeric.")
@@ -566,10 +617,22 @@ shrinkagepriors <- list(a = aShrink,
    B022 <- 10^12
   }
  }
+
+# Some input checking for startfacload
+if (missing(startfacload)) {
+ startfacload <- matrix(rnorm(m*factors, sd = .5)^2, nrow=m, ncol=factors)
+# if (factors >= 1) for (i in 1:factors) startfacload[i,] <- c(rep(1/i,i) + rnorm(i, sd=.1), rep(0,factors-i))
+# startfacload[-(1:factors),] <- 1/factors + rnorm((m-factors)*factors, sd=.1)
+} else {
+ if (!is.numeric(startfacload) || !is.matrix(startfacload) ||
+     (nrow(startfacload) != m && factors >= 1) || ncol(startfacload) != factors)
+  stop("Argument 'startfacload' must be a numeric matrix of dimension c(ncol(y), factors).")
+}
+
  # Some input checking for startpara
  if (missing(startpara)) {
   startpara <- list(mu = c(rep(-3, m) + rnorm(m), rep(0, factors)),
-		    phi = c(rep(.8, m), rep(0, factors)) + pmin(rnorm(m + factors, sd=.06), .095),
+		    phi = c(rep(.8, m), rep(.8, factors)) + pmin(rnorm(m + factors, sd=.06), .095),
 		    sigma = rep(.1, m + factors) + rgamma(m + factors, 1, 10)) 
  } else {
   if (!is.list(startpara))
@@ -612,23 +675,19 @@ shrinkagepriors <- list(a = aShrink,
    stop("Argument 'startlatent' must be a numeric matrix of dimension c(nrow(y), factors + ncol(y)).")
  }
 
- # Some input checking for startfacload
-if (missing(startfacload)) {
- startfacload <- matrix(NA, nrow=m, ncol=factors)
- if (factors >= 1) for (i in 1:factors) startfacload[i,] <- c(rep(1/i,i) + rnorm(i, sd=.1), rep(0,factors-i))
- startfacload[-(1:factors),] <- 1/factors + rnorm((m-factors)*factors, sd=.1)
-} else {
- if (!is.numeric(startfacload) || !is.matrix(startfacload) ||
-     nrow(startfacload) != m || ncol(startfacload) != factors)
-  stop("Argument 'startfacload' must be a numeric matrix of dimension c(ncol(y), factors).")
-}
+ if (missing(startlatent0)) {
+  startlatent0 <- startpara[["mu"]][1] + rnorm(m + factors)
+ } else {
+  if (!is.numeric(startlatent0) || length(startlatent0) != (m + factors))
+   stop("Argument 'startlatent0' must be a vector of length factors + ncol(y).")
+ }
 
- # Some input checking for startfac
+# Some input checking for startfac
 if (missing(startfac)) {
  startfac <- matrix(rnorm(factors*n, 0, sd=.1), nrow=factors)
 } else {
  if (!is.numeric(startfac) || !is.matrix(startfac) ||
-     nrow(startfac) != factors || ncol(startfac) != n)
+     nrow(startfac) != factors || (ncol(startfac) != n && factors >= 1))
   stop("Argument 'startfac' must be a numeric matrix of dimension c(factors, nrow(y)).")
 }
 
@@ -669,7 +728,7 @@ if (!is.numeric(runningstoremoments) || length(runningstoremoments) != 1 || runn
 
 if (is.matrix(restrict)) {
  if (any(dim(restrict) != c(m, factors)) || any(is.na(restrict) || !is.logical(restrict)))
-     stop("Argument 'restrict' must be an appropriate logical matrix or \"none\"/\"upper\".")
+     stop("Argument 'restrict' must be an appropriate logical matrix or \"none\"/\"upper\"/\"auto\".")
  if (any(rowSums(restrict) == factors))
      stop("Argument 'restrict' can't have rows where all elements are TRUE.")
  restr <- matrix(FALSE, nrow = m, ncol = factors)
@@ -677,17 +736,19 @@ if (is.matrix(restrict)) {
 }
 
 if (is.character(restrict)) {
- if (length(restrict) > 1) stop("Argument 'restrict' must be an appropriate matrix or \"none\"/\"upper\".")
+ if (length(restrict) > 1) stop("Argument 'restrict' must be an appropriate matrix or \"none\"/\"upper\"/\"auto\".")
  restr <- matrix(FALSE, nrow = m, ncol = factors)
  if (restrict == "upper") restr[upper.tri(restr)] <- TRUE
+ if (restrict == "auto") restr <- findrestrict(y, factors = factors)
 }
 
-restr <- matrix(as.integer(!restr), nrow = nrow(restr), ncol = ncol(restr))
+restrinv <- matrix(as.integer(!restr), nrow = nrow(restr), ncol = ncol(restr))
 
 startval <- list(facload = startfacload,
 		 fac = startfac,
 		 para = startpara,
 		 latent = startlatent,
+		 latent0 = startlatent0,
 		 tau2 = starttau2)
 
 auxstore <- FALSE
@@ -698,7 +759,7 @@ res <- .Call("sampler", t(y), draws, burnin, startval,
        	thin, auxstore, thintime, myquiet, para,
 	mhsteps, B011, B022, mhcontrol, gammaprior, 
 	myoffset, truncnormal,
-	restr, interweaving, signswitch, runningstore,
+	restrinv, interweaving, signswitch, runningstore,
 	runningstorethin, runningstoremoments, columnwise,
 	heteroskedastic, priorhomoskedastic, priorh0,
 	PACKAGE = "factorstochvol")
@@ -720,18 +781,22 @@ res$config <- list(draws = draws, burnin = burnin, thin = thin,
 				  B011 = B011, B022 = B022),
 		    startpara = startpara,
 		    startlatent = startlatent,
+		    startlatent0 = startlatent0,
 		    startfacload = startfacload,
 		    startfac = startfac)
- res$priors <- list(priormu = priormu, priorphi = priorphi,
-		    priorsigma = priorsigma, priorfacload = priorfacload,
+ res$priors <- list(priormu = priormu,
+		    priorphiidi = priorphiidi,
+		    priorphifac = priorphifac,
+		    priorsigmaidi = priorsigmaidi,
+		    priorsigmafac = priorsigmafac,
+		    priorfacload = priorfacload,
 		    priorng = priorng, columnwise = columnwise,
-		    priorh0 = priorh0,
+		    priorh0idi = priorh0idi, priorh0fac = priorh0fac,
 		    priorhomoskedastic = priorhomoskedastic)
 
  if (auxstore) {
   attr(res$mixprob, "dim") <- c(10, n, m+factors, dim(res$mixind)[3])
  } else {
-  res$h0 <- NULL
   res$tau2 <- NULL
   res$lambda2 <- NULL
   res$mixprob <- NULL

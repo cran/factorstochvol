@@ -543,7 +543,7 @@ facloadpointplot <- function(x, fsvsimobj = NULL, statistic = "median",
   }
  }
 
- oldpar <- par(mgp = c(1.7, .5, 0), mar = c(2.7, 2.7, 2, 0.5))
+# oldpar <- par(mgp = c(1.7, .5, 0), mar = c(2.7, 2.7, 2, 0.5))
  
  if (r == 1)  {
   myplot <- barplot(facloads, main = paste("Posterior", statistic, "of factor loadings"),
@@ -582,7 +582,7 @@ facloadpointplot <- function(x, fsvsimobj = NULL, statistic = "median",
 	 cex = cex, transparency = alpha, col = col)
   }
  }
- par(oldpar)
+# par(oldpar)
  invisible(x)
 }
 

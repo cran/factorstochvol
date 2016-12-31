@@ -39,6 +39,8 @@ rvolonly <- function(para, n) {
 #' @param heteroskedastic Logical vector of length \code{m+r}. When
 #' \code{TRUE}, time-varying volatilities are generated; when
 #' \code{FALSE}, constant volatilities (equal to \code{mu}) are generated.
+#' @param df If not equal to Inf, the factors are misspecified (come from
+#' a t distribution instead of a Gaussian). Only used for testing.
 #' 
 #' @return The value returned is a list object of class \code{fsvsim} holding
 #'  \itemize{
@@ -61,7 +63,7 @@ rvolonly <- function(para, n) {
 #' @export
 
 fsvsim <- function(n = 1000, series = 10, factors = 1, facload = "dense", idipara, facpara,
-		   heteroskedastic = rep(TRUE, series + factors)) {
+		   heteroskedastic = rep(TRUE, series + factors), df = Inf) {
  if (!is.numeric(factors) || is.na(factors) || factors < 0) stop('Number of factors must be numeric and >= 0')
  if (!is.numeric(series) || is.na(series) || series < factors) stop('Number of series must be numeric and >= factors')
  
@@ -135,8 +137,10 @@ fsvsim <- function(n = 1000, series = 10, factors = 1, facload = "dense", idipar
   }
   
   facvol0 <- facvol[1,,drop=FALSE] 
-
-  f <- t(apply(facvol[-1,,drop=FALSE], 2, function(x) rnorm(n, mean=0, sd=exp(x/2))))
+  
+  # note: if df != Inf, this means misspecification!
+  f <- t(apply(facvol[-1,,drop=FALSE], 2, function(x) exp(x/2) * rt(n, df = df)))
+  #f <- t(apply(facvol[-1,,drop=FALSE], 2, function(x) exp(x/2) * runif(n, -2, 2)))
   tmp <- t(apply(idivol[-1,,drop=FALSE], 2, function(x) rnorm(n, mean=0, sd=exp(x/2))))
   y <- t(facload%*%f + tmp)
   

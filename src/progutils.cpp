@@ -63,11 +63,12 @@ void store(const Rcpp::NumericMatrix &curfacload, Rcpp::NumericVector &facload,
   }
  }
  
+ std::copy(curh0.begin(), curh0.end(), h0.begin() + where * curh0.length());
+ 
  if (auxstore) { // store mixture probabilities, mixture indicators, shrinkage hyperparas, h0
   std::copy(curmixprob.begin(), curmixprob.end(), mixprob.begin() + where * curmixprob.length());
   std::copy(curmixind.begin(), curmixind.end(), mixind.begin() + where * curmixind.length());
   std::copy(curlambda2.begin(), curlambda2.end(), lambda2.begin() + where * curlambda2.length());
   std::copy(curtau2.begin(), curtau2.end(), tau2.begin() + where * curtau2.length());
-  std::copy(curh0.begin(), curh0.end(), h0.begin() + where * curh0.length());
  }
 }

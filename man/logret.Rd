@@ -6,11 +6,11 @@
 \alias{logret.matrix}
 \title{Computes the log returns of a vector-valued time series}
 \usage{
-logret(dat, demean = FALSE, ...)
+logret(dat, demean = FALSE, standardize = FALSE, ...)
 
-\method{logret}{matrix}(dat, demean = FALSE, ...)
+\method{logret}{matrix}(dat, demean = FALSE, standardize = FALSE, ...)
 
-\method{logret}{data.frame}(dat, demean = FALSE, ...)
+\method{logret}{data.frame}(dat, ...)
 }
 \arguments{
 \item{dat}{The raw data, a matrix with \code{n}
@@ -19,6 +19,10 @@ logret(dat, demean = FALSE, ...)
 
 \item{demean}{Logical value indicating whether the data should
 be de-meaned.}
+
+\item{standardize}{Logical value indicating whether the data should
+be standardized (in the sense that each component series has an empirical
+variance equal to one).}
 
 \item{...}{Ignored.}
 }

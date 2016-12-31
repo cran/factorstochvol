@@ -359,9 +359,13 @@ predcov <- function(x, ahead = 1, each = 1) {
   for (j in seq_len(dim(x$facload)[3])) {
    for (k in seq_len(each)) {
     tmp <- (j-1)*each+k
-    ret[,,tmp,i] <- x$facload[,,j] %*%
+    if (r >= 1) {
+     ret[,,tmp,i] <- x$facload[,,j] %*%
                     (exp(pred$factorh[,tmp,i]) * t(x$facload[,,j])) + 
                     diag(exp(pred$idih[,tmp,i]))
+    } else {
+     ret[,,tmp,i] <- diag(exp(pred$idih[,tmp,i]))
+    }
    }
   }
  }
@@ -422,9 +426,13 @@ predcor <- function(x, ahead = 1, each = 1) {
   for (j in seq_len(dim(x$facload)[3])) {
    for (k in seq_len(each)) {
     tmp <- (j-1)*each+k
-    ret[,,tmp,i] <- cov2cor(x$facload[,,j] %*%
-                    (exp(pred$factorh[,tmp,i]) * t(x$facload[,,j])) + 
-                    diag(exp(pred$idih[,tmp,i])))
+    if (r >= 1) {
+     ret[,,tmp,i] <- cov2cor(x$facload[,,j] %*%
+                     (exp(pred$factorh[,tmp,i]) * t(x$facload[,,j])) + 
+                     diag(exp(pred$idih[,tmp,i])))
+    } else {
+     ret[,,tmp,i] <- diag(exp(pred$idih[,tmp,i]))
+    }
    }
   }
  }
@@ -801,18 +809,27 @@ signident <- function(x, method = "maximin", implementation = 3) {
 
 #' A posteriori factor order identification
 #'
-#' \code{orderident} provides a (very ad-hoc) method for identifying
+#' \code{orderident} provides some (very ad-hoc) methods for identifying
 #' the ordering of the factors after running the (unrestricted) MCMC
 #' sampler by 
-#' ordering according to the argument \code{method}. Not recommended for
-#' production code (often unstable).
+#' ordering according to the argument \code{method}.
 #'
 #' @param x Object of class \code{'fsvdraws'}, usually resulting from a call
 #' to \code{\link{fsvsample}}.
-#' @param method Currently only "averagemeanabs" is supported.
-#' This mean that the factors are ordered according to their average
-#' mean absolute loadings size.
-#' 
+#' @param method Methods currently supported:
+#' \itemize{
+#' \item \code{summean} Sort by sum of mean loadings (descending).
+#' \item \code{summeaninv} Sort by sum of mean loadings (ascending).
+#' \item \code{summeanabs} Sort by sum of mean absolute loadings (descending).
+#' \item \code{summed} Sort by sum of median loadings (descending).
+#' \item \code{summedinv} Sort by sum of median loadings (ascending).
+#' \item \code{summedabs} Sort by sum of median absolute loadings (descending).
+#' \item \code{maxmed} Sort by maximum median loadings (descending).
+#' \item \code{maxmedinv} Sort by maximum median loadings (ascending).
+#' \item \code{maxmedrel} Sort by maximum median loadings, relative to the sum of all median loadings on that factor (descending).
+#' \item \code{maxmedabsrel} Sort by maximum absolute median loadings, relative to the sum of all median loadings on that factor (descending).
+#' }
+#'
 #' @return Returns an object of class \code{'fsvdraws'} with adjusted
 #' ordering.
 #'
@@ -820,14 +837,48 @@ signident <- function(x, method = "maximin", implementation = 3) {
 #' 
 #' @export
 
-orderident <- function(x, method = "averagemeanabs") {
+orderident <- function(x, method = "summed") {
  if (!is(x, "fsvdraws")) stop("This function expects an 'fsvdraws' object.")
- if (method != "averagemeanabs") stop("Argument 'method' must currently be 'averagemeanabs'.")
- r <- dim(x$facload)[2]
- if (r <= 1) return(x)
- m <- dim(x$facload)[1]
- averagemeans <- colMeans(apply(abs(x$facload), 1:2, mean))
- myorder <- order(averagemeans, decreasing = TRUE)
+ possiblemethods <- c("summean", "summeaninv", "summeanabs", "summedabs", "summed",
+		      "summedinv", "maxmed", "maxmedinv", "maxmedrel", "maxmedrelabs")
+ if (is.numeric(method)) {
+  if (length(method) != ncol(x$facload))
+   stop(paste("Argument 'method' must be numeric of length 'number of factors' or one of:",
+	      paste(possiblemethods, collapse = ", ")))
+  myorder <- NULL
+  for (i in seq_len(ncol(x$facload))) {
+   tmp <- rev(order(apply(x$facload[method[i],,], 1, median)))
+   for (j in seq_len(ncol(x$facload))) {
+    if (!(tmp[j] %in% myorder)) {
+     myorder[i] <- tmp[j]
+     break
+    }
+   }
+  }
+ } else {
+  if (!all(method %in% possiblemethods))
+   stop(paste("Argument 'method' must be numeric of length 'number of factors' or one of:",
+	      paste(possiblemethods, collapse = ", ")))
+  r <- dim(x$facload)[2]
+  if (r <= 1) return(x)
+  m <- dim(x$facload)[1]
+  orderstats <- switch(method,
+    summean = colSums(apply(x$facload, 1:2, mean)),
+    summeaninv = colSums(apply(x$facload, 1:2, mean)),
+    summeanabs = colSums(apply(abs(x$facload), 1:2, mean)),
+    summed = colSums(apply(x$facload, 1:2, median)),
+    summedinv = colSums(apply(x$facload, 1:2, median)),
+    summedabs = colSums(apply(abs(x$facload), 1:2, median)),
+    maxmed = apply(apply(x$facload, 1:2, median), 2, max),
+    maxmedinv = apply(apply(x$facload, 1:2, median), 2, max),
+    maxmedrel = apply(apply(x$facload, 1:2, median), 2, max) / colSums(apply(x$facload, 1:2, median)),
+    maxmedabsrel = apply(apply(abs(x$facload), 1:2, median), 2, max) / colSums(apply(abs(x$facload), 1:2, median)),
+  )
+  myorder <- order(orderstats, decreasing = TRUE)
+  if (method %in% possiblemethods[grep("inv", possiblemethods)]) myorder <- rev(myorder)
+ }
+ m <- nrow(x$facload)
+ r <- ncol(x$facload)
  x$facload <- x$facload[,myorder,,drop=FALSE]
  x$f <- x$f[myorder,,,drop=FALSE]
  x$para[,m+(1:r),] <- x$para[,m+myorder,,drop=FALSE]
@@ -835,5 +886,6 @@ orderident <- function(x, method = "averagemeanabs") {
  if (exists("h", x$runningstore)) x$runningstore$h[,m+(1:r),] <- x$runningstore$h[,m+myorder,,drop=FALSE]
  if (exists("f", x$runningstore)) x$runningstore$f <- x$runningstore$f[myorder,,,drop=FALSE]
  if (exists("sd", x$runningstore)) x$runningstore$sd[,m+(1:r),] <- x$runningstore$sd[,m+myorder,,drop=FALSE]
+ if (exists("identifier", x)) x$identifier <- x$identifier[myorder,]
  x
 }

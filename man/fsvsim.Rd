@@ -5,7 +5,7 @@
 \title{Simulate data from a factor SV model}
 \usage{
 fsvsim(n = 1000, series = 10, factors = 1, facload = "dense", idipara,
-  facpara, heteroskedastic = rep(TRUE, series + factors))
+  facpara, heteroskedastic = rep(TRUE, series + factors), df = Inf)
 }
 \arguments{
 \item{n}{Length of the series to be generated.}
@@ -34,6 +34,9 @@ respectively. If omitted, plausible values are generated.}
 \item{heteroskedastic}{Logical vector of length \code{m+r}. When
 \code{TRUE}, time-varying volatilities are generated; when
 \code{FALSE}, constant volatilities (equal to \code{mu}) are generated.}
+
+\item{df}{If not equal to Inf, the factors are misspecified (come from
+a t distribution instead of a Gaussian). Only used for testing.}
 }
 \value{
 The value returned is a list object of class \code{fsvsim} holding

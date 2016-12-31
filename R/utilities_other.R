@@ -1,10 +1,11 @@
 #' @describeIn logret (De-meaned) log returns
 #' @export
 
-logret.matrix <- function(dat, demean = FALSE, ...) {
+logret.matrix <- function(dat, demean = FALSE, standardize = FALSE, ...) {
  tmp <- dat[,colSums(is.na(dat)) <= 0.5]
  tmp <- diff(log(as.matrix(tmp)))
  if (all(isTRUE(demean))) tmp <- tmp - rep(colMeans(tmp), each = nrow(tmp))
+ if (all(isTRUE(standardize))) tmp <- tmp / rep(apply(tmp, 2, sd), each = nrow(tmp))
  tmp
 }
 
@@ -12,7 +13,7 @@ logret.matrix <- function(dat, demean = FALSE, ...) {
 #' @describeIn logret (De-meaned) log returns
 #' @export
 
-logret.data.frame <- function(dat, demean = FALSE, ...) {
+logret.data.frame <- function(dat, ...) {
  dat <- data.matrix(dat)
  logret(dat, ...)
 }
@@ -94,3 +95,90 @@ preorder <- function(dat, factors = ledermann(ncol(dat)), type = "fixed", transl
  ordering
 }
 
+
+#' Ad-hoc method for (weakly) identifying the factor
+#' loadings matrix
+#'
+#' In factor SV models, the identification of the factor loadings
+#' matrix is often
+#' chosen through a preliminary static factor analysis. 
+#' After a maximum likelihood factor model is fit to the data,
+#' variables are ordered as follows: The variable with the
+#' lowest loadings on all factors except the first (relative to
+#' it) is determined to lead the first factor,
+#' the variable with the lowest loadings on all factors except the
+#' first two (relative to these) is determined to lead the second
+#' factor, etc. 
+#' 
+#' @param dat Matrix containing the data, with \code{n} rows
+#' (points in time) and \code{m} columns (component series).
+#' @param factors Number of factors to be used.
+#' @param transload Function for transforming the estimated
+#' factor loadings before ordering. Defaults to the absolute value
+#' function.
+#' @param relto Can be 'none', 'current' or 'all'. If 'none', the series
+#' with the highest loadings is placed first, the series with the second
+#' highest is placed second, and so on.
+#' If 'current', the current factor loading is used as a reference, if 'all',
+#' all previous loadings are summed up to be the reference.
+#'
+#' @return A \code{m} times \code{factors} matrix indicating
+#' the restrictions.
+#'
+#' @note This function is automatically invoked by fsvsample if
+#' restrict is set to 'auto'.
+#'
+#' @seealso ledermann 
+#'
+#' @export
+
+findrestrict <- function(dat, factors, transload = abs, relto = 'all') {
+ m <- ncol(dat)
+ control <- list(opt = list(maxit = 100000)) 
+ ordering <- rep(NA_integer_, m)
+ restrict <- matrix(FALSE, nrow = m, ncol = factors)
+
+ fa <- factanal(dat, factors, control = control)
+ 
+ for (i in seq_len(factors - 1)) {
+  if (relto == 'current') {
+   cur <- transload(fa$loadings[, i]) 
+   tmp <- order(rowSums(transload(fa$loadings[, (i+1):factors, drop = FALSE])) / cur)
+  } else if (relto == 'all') {
+   cur <- rowSums(transload(fa$loadings[, 1:i, drop = FALSE]))
+   tmp <- order(rowSums(transload(fa$loadings[, (i+1):factors, drop = FALSE])) / cur)
+  } else if (relto == 'none') {
+   tmp <- order(transload(fa$loadings[,i]), decreasing = TRUE)
+  } else stop("Unknown value of 'relto'.")
+  ordering[i] <- tmp[!(tmp %in% ordering)][1]
+  restrict[ordering[i], (i+1):factors] <- TRUE
+ }
+ ordering[factors : m] <- (1:m)[!((1:m) %in% ordering)]
+ restrict
+}
+
+
+#' Computes the empirical exponentially weighted covariance matrix
+#'
+#' A common way to get estimates for time-varying covariance matrices
+#' is the compute the exponentially weighted empirical covariance matrix.
+#'
+#' @param dat Matrix containing the data, with \code{n} rows
+#' (points in time) and \code{m} columns (component series).
+#'
+#' @param alpha Speed of decay.
+#' 
+#' @param hist How far to go back in time?
+#'
+#' @return A \code{m} times \code{m} covariance matrix estimate.
+#'
+#' @export
+
+expweightcov <- function(dat, alpha = 4/126, hist = 180) {
+ n <- nrow(dat)
+ mycov <- tcrossprod(dat[n - hist + 1,])
+ for (i in 2:hist) {
+  mycov <- (1 - alpha) * mycov + alpha * tcrossprod(dat[n - hist + i,])
+ }
+ mycov
+}

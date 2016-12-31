@@ -5,39 +5,44 @@
 \title{Markov Chain Monte Carlo (MCMC) Sampling for the Factor Stochastic
 Volatility Model.}
 \usage{
-fsvsample(y, draws = 1000, burnin = 100, factors = 1, priormu = c(0,
-  10), priorphi = c(10, 3, 3, 3), priorsigma = 1, priorfacload = 1,
-  priorng = c(1, 1), columnwise = FALSE, priorh0 = c("stationary", 1),
-  thin = 1, keeptime = "last", runningstore = 1, runningstorethin = 1,
-  runningstoremoments = 2, quiet = FALSE, restrict = "upper",
-  interweaving = 4, signswitch = FALSE, heteroskedastic = TRUE,
-  priorhomoskedastic = NA, expert, startpara, startlatent, startfacload,
-  startfac)
+fsvsample(y, factors = 1, draws = 1000, burnin = 1000, priormu = c(0,
+  10), priorphiidi = c(10, 3), priorphifac = c(10, 3), priorsigmaidi = 1,
+  priorsigmafac = 1, priorfacload = 1, priorng = c(1, 1),
+  columnwise = FALSE, priorh0idi = "stationary",
+  priorh0fac = "stationary", thin = 1, keeptime = "last",
+  runningstore = 1, runningstorethin = 10, runningstoremoments = 2,
+  quiet = FALSE, restrict = "auto", interweaving = 4,
+  signswitch = FALSE, heteroskedastic = TRUE, priorhomoskedastic = NA,
+  expert, startpara, startlatent, startlatent0, startfacload, startfac)
 }
 \arguments{
 \item{y}{Data matrix. Each of \code{m} rows is assumed to contain a single
 (univariate) series of length \code{n}.}
 
+\item{factors}{Number of latent factors to be estimated.}
+
 \item{draws}{Number of MCMC draws kept after burn-in.}
 
 \item{burnin}{Number of initial MCMC draws to be discarded.}
 
-\item{factors}{Number of latent factors to be estimated.}
-
 \item{priormu}{Vector of length 2 denoting prior mean and standard deviation
-for unconditional levels of the log-volatility processes.}
+for unconditional levels of the idiosyncratic log-variance processes.}
 
-\item{priorphi}{Vector of length 4, indicating the shape parameters for the
+\item{priorphiidi}{Vector of length 2, indicating the shape parameters for the
 Beta prior distributions of the transformed parameters \code{(phi+1)/2}, where
-\code{phi} denotes the persistence of the log-variances The first two
-elements of \code{priorphi} are interpreted to belong to the idiosyncratic
-series, the third and fourth element of \code{priorphi} are interpreted to
-belong to the latent factors.}
+\code{phi} denotes the persistence of the idiosyncratic log-variances.}
 
-\item{priorsigma}{Vector of length \code{m + factors} containing the
-prior volatilities of log-variances Note: If \code{priorsigma} has exactly
-two elements, the first one will be recycled for all idiosyncratic series and
-the second one will be recycled for all latent factors.}
+\item{priorphifac}{Vector of length 2, indicating the shape parameters for the
+Beta prior distributions of the transformed parameters \code{(phi+1)/2}, where
+\code{phi} denotes the persistence of the factor log-variances.}
+
+\item{priorsigmaidi}{Vector of length \code{m} containing the
+prior volatilities of log-variances. If \code{priorsigmaidi} has exactly
+one element, it will be recycled for all idiosyncratic log-variances.}
+
+\item{priorsigmafac}{Vector of length \code{factors} containing the
+prior volatilities of log-variances. If \code{priorsigmafac} has exactly
+one element, it will be recycled for all factor log-variances.}
 
 \item{priorfacload}{Either a matrix of dimensions \code{m} times \code{factors}
 with nonnegative elements or a single number. If a matrix is provided, its
@@ -51,22 +56,30 @@ is interpreted as the shrinkage parameter \code{a}.}
 hyperprior's hyperhyperparameters \code{c} and \code{d}.}
 
 \item{columnwise}{Set to \code{TRUE} if you want to use column-wise shrinkage
-and to \code{FALSE} for row-wise shrinkage. For details please see the paper by
-Kastner et al. (2016).}
+and to \code{FALSE} for row-wise shrinkage. For details please see the paper
+by Kastner et al. (2016).}
 
-\item{priorh0}{Vector of length 1, 2, or \code{m + factors}, containing
-information about the Gaussian prior for the initial log-variances The
-first \code{m} elements are used for the idiosyncratic log-variances, the
-last \code{factors} elements are used for the factor log-variances
-If an element of \code{priorh0} is a nonnegative number, the conditional
-prior of the corresponding initial log-volatility h0 is assumed to be Gaussian
-with mean 0 and standard deviation priorh0 time sigma. If an element of
-\code{priorh0} is the string 'stationary', the prior of the corresponding
+\item{priorh0idi}{Vector of length 1 or \code{m}, containing
+information about the Gaussian prior for the initial idiosyncratic
+log-variances.
+If an element of \code{priorh0idi} is a nonnegative number, the conditional
+prior of the corresponding initial log-variance h0 is assumed to be Gaussian
+with mean 0 and standard deviation \code{priorh0idi} times $sigma$.
+If an element of
+\code{priorh0idi} is the string 'stationary', the prior of the corresponding
 initial log volatility is taken to be from the stationary distribution, i.e.
-h0 is assumed to be Gaussian with mean 0 and variance $sigma^2/(1-phi^2)$.
-If \code{priorh0} is of length 2 it will be recycled accordingly, whereby
-the first element is used for all idiosyncratic log-variances and the
-second element is used for all factor log-variances.}
+h0 is assumed to be Gaussian with mean 0 and variance $sigma^2/(1-phi^2)$.}
+
+\item{priorh0fac}{Vector of length 1 or \code{factors}, containing
+information about the Gaussian prior for the initial factor
+log-variances.
+If an element of \code{priorh0fac} is a nonnegative number, the conditional
+prior of the corresponding initial log-variance h0 is assumed to be Gaussian
+with mean 0 and standard deviation \code{priorh0fac} times $sigma$.
+If an element of
+\code{priorh0fac} is the string 'stationary', the prior of the corresponding
+initial log volatility is taken to be from the stationary distribution, i.e.
+h0 is assumed to be Gaussian with mean 0 and variance $sigma^2/(1-phi^2)$.}
 
 \item{thin}{Single number greater or equal to 1, coercible to integer.
 Every \code{thin}th MCMC draw is kept and returned. The default value
@@ -112,12 +125,15 @@ calculated.}
 informative output during sampling should be omitted. The default
 value is \code{FALSE}, implying verbose output.}
 
-\item{restrict}{Either "upper" or "none", indicating whether the factor loadings
-matrix should be restricted to have zeros above the diagonal ("upper") or
-whether all elements should be estimated from the data ("none"). Setting
-\code{restrict} to "upper" often stabilizes MCMC
+\item{restrict}{Either "upper", "none", or "auto", indicating whether
+the factor loadings
+matrix should be restricted to have zeros above the diagonal ("upper"), 
+whether all elements should be estimated from the data ("none"), or
+whether the function \code{\link{findrestrict}} should be invoked for a
+priori finding suitable zeros. Setting
+\code{restrict} to "upper" or "auto" often stabilizes MCMC
 estimation and can be important for identifying the factor loadings matrix,
-however, it imposes a dependence on how the data are ordered. Setting
+however, it generally is a strong prior assumption. Setting
 \code{restrict} to "none" is usually the preferred option if identification
 of the factor loadings matrix is of less concern but covariance estimation
 or prediction is the goal. Alternatively, \code{restrict} can be a
@@ -203,6 +219,10 @@ the \code{sigma}s must be positive real numbers.}
 \item{startlatent}{\emph{optional} numeric matrix of dimension
 \code{c(n, m + factors)}, containing the starting values of the
 latent log-variances.}
+
+\item{startlatent0}{\emph{optional} numeric vector of length
+\code{m + factors}, containing the starting values of the initial latent
+log-variances.}
 
 \item{startfacload}{\emph{optional} numeric matrix of dimension
 \code{c(m, factors)}, containing the starting values of the

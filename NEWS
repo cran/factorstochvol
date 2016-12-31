@@ -1,9 +1,30 @@
+Changes in version 0.8.3
+  - Default for argument "restrict" in fsvsample is now "auto". This does not
+    require the end-user to pre-sort the data but instead imposes zeros
+    in the factor loadings matrix according to a preliminary static
+    factor analysis.
+  - New function findrestrict.
+  - New function orderident.
+  - Changed default burn-in in fsvsample to 1000 (from 100).
+  - Changed default value of runningstorethin in fsvsample to 10 (from 1).
+  - The function logret can now standardize so that each series has (empirical)
+    variance equal to 1.
+  - Requires stochvol version >= 1.3.2.
+  - New function expweightcov.
+  - Changed default values for priorh0fac and priorphifac in fsvsample.
+  - h0 is now stored and returned by default by fsvsample.
+  - Added new argument "startlatent0" for passing starting values for h0
+    in fsvsample.
+  - Changed some default starting values to (somewhat) resemble those often
+    encountered in real data applications. This could decrease burn-in time.
+
 Changes in version 0.8.2
   - The function predprecision is now called predprecWB.
   - The first two arguments of predloglik and predloglikWB were interchanced.
   - Fixed ambiguity of type casting for log10() in sampler.cpp (needed to
     compile on Solaris).
-  - Turned on progress indicator also for Windows.
+  - Turned on progress indicator also for Windows (need %% instead of \045 or
+    \% to escape a percent symbol in Rprintf).
   - Fixed signident to work also for 1 single MCMC draw.
   - Minor fixes in CITATION.
 
@@ -149,3 +170,6 @@ Changes in Version 0.2
 Changes in Version 0.1
   - Project initiated.
   - Fully R-based "proof of concept".
+
+TODO
+  - Vignette

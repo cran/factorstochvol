@@ -4,7 +4,7 @@
 #'             mtext par plot plot.new points symbols text title
 #'
 #' @importFrom stats cov2cor density factanal median quantile rgamma
-#'             rnorm runif sd ts.plot
+#'             rnorm runif rt sd ts.plot
 #'
 #' @importFrom utils combn flush.console
 #'
