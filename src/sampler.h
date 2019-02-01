@@ -3,7 +3,7 @@
 
 //#define ARMA_NO_DEBUG // disables bounds checks
 #include <RcppArmadillo.h>
-#include <update.h>  // decl'd and def'd in "stochvol" (univariate SV-update)
+#include <stochvol.h>  // decl'd and def'd in "stochvol" (univariate SV-update)
 #include "progutils.h"
 
 double rgig1(double, double, double);

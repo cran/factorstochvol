@@ -19,7 +19,6 @@ double do_rgig1(double lambda, double chi, double psi) {
  return as<double>(fun(1, lambda, chi, psi));
 }
 
-
 void test(double * data, int size) {
  for (int i = 0; i < size; i++) {
   data[i] = i;
@@ -555,6 +554,12 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  int space4print = floor(log10(N + .1)) + 1;
  int doevery = ceil((2000.*N)/((r+1)*T*m));
 
+ // temporary variables for the updated stochvol code
+ arma::mat curpara_arma(curpara.begin(), curpara.nrow(), curpara.ncol(), false);
+ arma::mat curh_arma(curh.begin(), curh.nrow(), curh.ncol(), false);
+ arma::mat curmixprob_arma(curmixprob.begin(), 10*T, mpr, false);
+ arma::imat curmixind_arma(curmixind.begin(), curmixind.nrow(), curmixind.ncol(), false);
+
  for (int i = 0; i < N; i++, effi++) {  // BEGIN main MCMC loop
   
   if (verbose && (i % doevery == 0)) {
@@ -582,9 +587,15 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
   // STEP 1 for "linearized residuals"
   for (int j = 0; j < m; j++) {
    if (sv(j) == true) {
-    update(curynorm(j,_), &curpara(0,j), &curh(0,j), curh0(j), &curmixprob(10*T*j), &curmixind(0,j),
+     double curh0j = curh0(j);
+     arma::vec curpara_j = curpara_arma.unsafe_col(j);
+     arma::vec curh_j = armah.unsafe_col(j);
+     arma::vec curmixprob_j = curmixprob_arma.unsafe_col(j);
+     arma::ivec curmixind_j = curmixind_arma.unsafe_col(j);
+     stochvol::update_sv(armaynorm.row(j).t(), curpara_j, curh_j, curh0j, curmixprob_j, curmixind_j,
            centered_baseline, C0(j), cT, Bsigma(j), a0idi, b0idi, bmu, Bmu, B011inv, B022inv, Gammaprior,
            truncnormal, MHcontrol, MHsteps, parameterization, false, priorh0(j));
+     curh0(j) = curh0j;
    } else {
     double tmp = sum(square(armay.row(j) - armafacload.row(j)*armaf));
     tmp = 1/as<double>(rgamma(1, priorhomoskedastic(0) + .5*T, 1/(priorhomoskedastic(1) + .5*tmp)));
@@ -595,10 +606,15 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
   // STEP 1 for factors
   for (int j = m; j < mpr; j++) {
    if (sv(j) == true) {
-   update(curfnorm(j-m,_), &curpara(0,j), &curh(0,j), curh0(j),
-     &curmixprob(10*T*j), &curmixind(0,j), centered_baseline,
-     C0(j), cT, Bsigma(j), a0fac, b0fac, bmu, Bmu, B011inv, B022inv, Gammaprior,
-     truncnormal, MHcontrol, MHsteps, parameterization, true, priorh0(j));
+     double curh0j = curh0(j);
+     arma::vec curpara_j = curpara_arma.unsafe_col(j);
+     arma::vec curh_j = armah.unsafe_col(j);
+     arma::vec curmixprob_j = curmixprob_arma.unsafe_col(j);
+     arma::ivec curmixind_j = curmixind_arma.unsafe_col(j);
+     stochvol::update_sv(armafnorm.row(j-m).t(), curpara_j, curh_j, curh0j, curmixprob_j, curmixind_j,
+         centered_baseline, C0(j), cT, Bsigma(j), a0fac, b0fac, bmu, Bmu, B011inv, B022inv, Gammaprior,
+         truncnormal, MHcontrol, MHsteps, parameterization, true, priorh0(j));
+     curh0(j) = curh0j;
    }
   }
   
