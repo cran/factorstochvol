@@ -7,7 +7,7 @@
 #' the MCMC draws. It is the main workhorse to conduct inference for factor
 #' stochastic volatility models in this package.
 #' 
-#' @param y Data matrix. Each of \code{m} rows is assumed to contain a single
+#' @param y Data matrix. Each of \code{m} columns is assumed to contain a single
 #' (univariate) series of length \code{n}.
 #'
 #' @param factors Number of latent factors to be estimated.
@@ -17,44 +17,50 @@
 #' @param burnin Number of initial MCMC draws to be discarded.
 #'
 #' @param priormu Vector of length 2 denoting prior mean and standard deviation
-#' for unconditional levels of the idiosyncratic log-variance processes.
+#' for unconditional levels of the idiosyncratic log variance processes.
 #'
 #' @param priorphiidi Vector of length 2, indicating the shape parameters for the
 #' Beta prior distributions of the transformed parameters \code{(phi+1)/2}, where
-#' \code{phi} denotes the persistence of the idiosyncratic log-variances.
+#' \code{phi} denotes the persistence of the idiosyncratic log variances.
 #'
 #' @param priorphifac Vector of length 2, indicating the shape parameters for the
 #' Beta prior distributions of the transformed parameters \code{(phi+1)/2}, where
-#' \code{phi} denotes the persistence of the factor log-variances.
+#' \code{phi} denotes the persistence of the factor log variances.
 #'
 #' @param priorsigmaidi Vector of length \code{m} containing the
-#' prior volatilities of log-variances. If \code{priorsigmaidi} has exactly
-#' one element, it will be recycled for all idiosyncratic log-variances.
+#' prior volatilities of log variances. If \code{priorsigmaidi} has exactly
+#' one element, it will be recycled for all idiosyncratic log variances.
 #'
 #' @param priorsigmafac Vector of length \code{factors} containing the
-#' prior volatilities of log-variances. If \code{priorsigmafac} has exactly
-#' one element, it will be recycled for all factor log-variances.
+#' prior volatilities of log variances. If \code{priorsigmafac} has exactly
+#' one element, it will be recycled for all factor log variances.
 #'
 #' @param priorfacload Either a matrix of dimensions \code{m} times \code{factors}
-#' with nonnegative elements or a single number. If a matrix is provided, its
-#' elements are the standard deviations of the Gaussian prior distributions for
-#' the factor loadings. If a single nonnegative number is provided, it will be
-#' recycled accordingly. If a single negative number is provided, a Normal-Gamma
-#' shrinkage prior for the factor loadings is assumed, where \code{-priorfacload}
-#' is interpreted as the shrinkage parameter \code{a}.
+#' with positive elements or a single number (which will be recycled accordingly).
+#' The meaning of \code{priorfacload} depends on the setting of \code{priorfacloadtype}
+#' and is explained there.
 #'
-#' @param priorng Two-element vector with positive entries indicating the Gamma
-#' hyperprior's hyperhyperparameters \code{c} and \code{d}.
+#' @param priorfacloadtype Can be \code{"normal"}, \code{"rowwiseng"}, 
+#' \code{"colwiseng"}.
+#' \itemize{
+#'  \item{\code{"normal"}: }{Normal prior. The value of \code{priorfacload}
+#'                           is interpreted as the standard deviations of the
+#'                           Gaussian prior distributions for the factor loadings.}
+#'  \item{\code{"rowwiseng"}: }{Row-wise Normal-Gamma prior. The value of \code{priorfacload}
+#'                              is interpreted as the shrinkage parameter \code{a}.}
+#'  \item{\code{"colwiseng"}: }{Column-wise Normal-Gamma prior. The value of \code{priorfacload}
+#'                              is interpreted as the shrinkage parameter \code{a}.}
+#' }
+#' For details please see Kastner (2019).
 #'
-#' @param columnwise Set to \code{TRUE} if you want to use column-wise shrinkage
-#' and to \code{FALSE} for row-wise shrinkage. For details please see the paper
-#' by Kastner et al. (2017).
+#' @param priorng Two-element vector with positive entries indicating the Normal-Gamma
+#' prior's hyperhyperparameters \code{c} and \code{d}.
 #'
 #' @param priorh0idi Vector of length 1 or \code{m}, containing
 #' information about the Gaussian prior for the initial idiosyncratic
-#' log-variances.
+#' log variances.
 #' If an element of \code{priorh0idi} is a nonnegative number, the conditional
-#' prior of the corresponding initial log-variance h0 is assumed to be Gaussian
+#' prior of the corresponding initial log variance h0 is assumed to be Gaussian
 #' with mean 0 and standard deviation \code{priorh0idi} times $sigma$.
 #' If an element of
 #' \code{priorh0idi} is the string 'stationary', the prior of the corresponding
@@ -63,9 +69,9 @@
 #'
 #' @param priorh0fac Vector of length 1 or \code{factors}, containing
 #' information about the Gaussian prior for the initial factor
-#' log-variances.
+#' log variances.
 #' If an element of \code{priorh0fac} is a nonnegative number, the conditional
-#' prior of the corresponding initial log-variance h0 is assumed to be Gaussian
+#' prior of the corresponding initial log variance h0 is assumed to be Gaussian
 #' with mean 0 and standard deviation \code{priorh0fac} times $sigma$.
 #' If an element of
 #' \code{priorh0fac} is the string 'stationary', the prior of the corresponding
@@ -80,12 +86,12 @@
 #' @param keeptime Either a number coercible to a positive integer, or a string
 #' equal to "all" or "last". If a number different from 1 is provided, only every
 #' \code{keeptime}th latent log-volatility is being monitored. If, e.g.,
-#' \code{keeptime = 3}, draws for the latent log-variances
+#' \code{keeptime = 3}, draws for the latent log variances
 #' \code{h_1,h_4,h_7,...} will
 #' be kept. If \code{keeptime} is set to "all", this is equivalent to setting it
 #' to 1. If
 #' \code{keeptime} is set to "last" (the default), only draws for the very last
-#' latent log-variances h_n are kept.
+#' latent log variances h_n are kept.
 #'
 #' @param runningstore Because most machines these days do not have enough memory
 #' to store all draws for all points in time, setting \code{runningstore} to an
@@ -95,7 +101,7 @@
 #' variance, skewness, etc. will be stored for certain variables
 #' if \code{runningstore} is set to a value...
 #' \itemize{
-#'  \item{\code{>= 1}: }{Latent log-variances \code{h_1,h_2,...,h_(n+r)}.}
+#'  \item{\code{>= 1}: }{Latent log variances \code{h_1,h_2,...,h_(n+r)}.}
 #'  \item{\code{>= 2}: }{Latent factors \code{f_1,...,f_r}.}
 #'  \item{\code{>= 3}: }{Latent volatilities \code{sqrt(exp(h_1,h_2,...,h_(n+r)))}.}
 #'  \item{\code{>= 4}: }{Conditional covariance matrix and the square roots of its
@@ -199,61 +205,94 @@
 #'        Defaults to \code{10^12}.}
 #' }
 #'
-#' @param startpara \emph{optional} named list, containing the starting values
-#' for the parameter draws. If supplied, \code{startpara} must contain three
-#' elements named \code{mu} (vector of length \code{m}), \code{phi} (vector
-#' of length \code{m+r}) and \code{sigma} (vector of length \code{m+r}).
-#' The elements of \code{mu} can be arbitrary numerical values, the
-#' \code{phi}s must be real numbers between \code{-1} and \code{1}, and
-#' the \code{sigma}s must be positive real numbers.
+#' @param startpara \emph{optional} numeric matrix of dimension
+#' \code{c(3, m + factors)}, containing the starting values
+#' for the parameter draws. The first \code{m} columns must contain 
+#' parameters values corresponding to the idiosyncratic volatilities,
+#' the subsequent \code{factor} columns must contain parameter values
+#' corresponding to the factor volatilities. The first row of \code{startpara}
+#' corresponds to \code{mu}, the level of the log variances (can be arbitrary
+#' numerical values), the second row corresponds to \code{phi}, the persistence
+#' parameters of the log variances (numeric values between \code{-1} and \code{1}),
+#' and the third row corresponds to \code{sigma} (positive numeric values).
 #'
-#' @param startlatent \emph{optional} numeric matrix of dimension
+#' @param startlogvar \emph{optional} numeric matrix of dimension
 #' \code{c(n, m + factors)}, containing the starting values of the
-#' latent log-variances.
+#' latent log variances.
+#' The first \code{m} rows correspond to the idiosyncratic log variances,
+#' the subsequent \code{factor} rows correspond to the factor log variances.
+#' Was previously called startlatent.
 #'
-#' @param startlatent0 \emph{optional} numeric vector of length
+#' @param startlatent \emph{Deprecated.} Please use \code{startlogvar} instead.
+#'
+#' @param startlogvar0 \emph{optional} numeric vector of length
 #' \code{m + factors}, containing the starting values of the initial latent
-#' log-variances.
+#' log variances.
+#' The first \code{m} elements correspond to the idiosyncratic log variances,
+#' the subsequent \code{factor} elements correspond to the factor log variances.
+#' Was previously called startlatent0.
+#'
+#' @param startlatent0 \emph{Deprecated.} Please use \code{startlogvar0} instead.
 #'
 #' @param startfacload \emph{optional} numeric matrix of dimension
 #' \code{c(m, factors)}, containing the starting values of the
 #' factor loadings.
+#' In case of a single factor model, a numeric vector of length \code{n} is also accepted.
 #'
 #' @param startfac \emph{optional} numeric matrix of dimension
 #' \code{c(factors, n)}, containing the starting values of the
 #' latent factors.
+#' In case of a single factor model, a numeric vector of length \code{n} is also accepted.
+#'
+#' @param samplefac If set to \code{FALSE}, the factors are not sampled (but 
+#' remain at their starting values forever). This might be useful if one
+#' wants to include observed factors instead of latent ones.
+#'
+#' @param signident If set to \code{FALSE}, no ex-post sign-identification is
+#' performed. Defaults to \code{TRUE}.
 #' 
 #' @details For details concerning the factor SV algorithm please see
 #' Kastner et al. (2017), details about the univariate SV estimation
 #' can be found in Kastner and Frühwirth-Schnatter (2014).
 #' 
-#' @return 
-#' The value returned is a list object of class \code{fsvdraws} holding
+#' @return The value returned is a list object of class \code{fsvdraws} holding
 #'  \itemize{
-#'  \item{f}{Array containing factor draws from the posterior distribution.}
-#'  \item{para}{Array containing parameter draws form the posterior distribution.}
-#'  \item{h}{Array containing idiosyncratic and factor log-variance draws.}
-#'  \item{facload}{Array containing draws from the posterior distribution of the
+#'  \item{\code{facload}: }{Array containing draws from the posterior distribution of the
 #'                 factor loadings matrix.}
-#'  \item{y}{Matrix containing the data supplied.}
-#'  \item{runningstore}{List whose elements contain ergodic moments of certain
+#'  \item{\code{fac}: }{Array containing factor draws from the posterior distribution.}
+#'  \item{\code{logvar}: }{Array containing idiosyncratic and factor initial log variance draws.}
+#'  \item{\code{logvar0}: }{Array containing idiosyncratic and factor log variance draws.}
+#'  \item{\code{para}: }{Array containing parameter draws form the posterior distribution.}
+#'  \item{\code{y}: }{Matrix containing the data supplied.}
+#'  \item{\code{runningstore}: }{List whose elements contain ergodic moments of certain
 #'                      variables of interest. See argument
 #'                      \code{runningstore} for details about what
 #'                      is being stored here.}
+#'  \item{\code{config}: }{List containing information on configuration parameters.}
+#'  \item{\code{priors}: }{List containing prior hyperparameter values.}
+#'  \item{\code{identifier}: }{Matrix containing the indices of the series used for
+#'    ex-post sign-identification along with the corresponding minimum distances to zero.
+#'    See \code{\link{signident}} for details.}
 #' }
-#' To display the output, use \code{print}, \code{summary} and \code{plot}.
-#' The \code{print} method simply prints the posterior draws (which is very
-#' likely a lot of output); the \code{summary} method displays the summary
-#' statistics currently stored in the object; the \code{plot} method
-#' \code{\link{plot.fsvdraws}} gives a graphical overview.
+#' To display the output, use \code{print}, \code{plot}, and in particular specialized
+#' extractors and printing functions.
+#' The \code{print} method prints a high-level overview; specialized extractors such as
+#' \code{\link{covmat}} or \code{\link{runningcovmat}} are also available.
+#' The \code{plot} method invokes a simple covariance matrix plot; specialized plotting
+#' functions are linked in the documentation of \code{\link{plot.fsvdraws}}.
 #' 
 #' @references Kastner, G., Frühwirth-Schnatter, S., and Lopes, H.F. (2017).
 #' Efficient Bayesian Inference for Multivariate Factor Stochastic Volatility Models.
 #' \emph{Journal of Computational and Graphical Statistics}, \bold{26}(4), 905--917,
 #' \url{http://dx.doi.org/10.1080/10618600.2017.1322091}.
 #'
+#' @references Kastner, G. (2019).
+#' Sparse Bayesian Time-Varying Covariance Estimation in Many Dimensions
+#' \emph{Journal of Econometrics}, \bold{210}(1), 98--115,
+#' \url{https://doi.org/10.1016/j.jeconom.2018.11.007}
+#'
 #' @references Kastner, G. (2016).
-#' Dealing with Stochastic Volatility in Time Series Using the R Package
+#' Dealing with stochastic volatility in time series using the R package
 #' stochvol.
 #' \emph{Journal of Statistical Software}, \bold{69}(5), 1--30,
 #' \url{http://dx.doi.org/10.18637/jss.v069.i05}.
@@ -267,7 +306,7 @@
 #' @family wrappers
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Load exchange rate data (ships with stochvol):
 #' data(exrates, package = "stochvol")
 #' exrates$date <- NULL
@@ -290,26 +329,50 @@
 #' 
 #' @export
 
-fsvsample <- function(y, factors = 1, draws = 1000, burnin = 1000, 
-		      priormu = c(0, 10),
-		      priorphiidi = c(10, 3), priorphifac = c(10, 3),
-		      priorsigmaidi = 1, priorsigmafac = 1,
-		      priorfacload = 1,
+fsvsample <- function(y,
+		      factors = 1,
+		      draws = 1000,
+		      thin = 1,
+		      burnin = 1000,
+		      restrict = "none",
+                      priorfacloadtype = "rowwiseng", 
+		      priorfacload = .1,
 		      priorng = c(1, 1),
-                      columnwise = FALSE, 
+		      priormu = c(0, 10),
+		      priorphiidi = c(10, 3),
+		      priorphifac = c(10, 3),
+		      priorsigmaidi = 1,
+		      priorsigmafac = 1,
 		      priorh0idi = "stationary",
 		      priorh0fac = "stationary",
-		      thin = 1,
-		      keeptime = "last", runningstore = 1,
-		      runningstorethin = 10, runningstoremoments = 2,
-		      quiet = FALSE, restrict = "auto", interweaving = 4,
-		      signswitch = FALSE, 
+		      keeptime = "last",
 		      heteroskedastic = TRUE,
 		      priorhomoskedastic = NA,
-		      expert,
-		      startpara, startlatent, startlatent0,
-		      startfacload, startfac) {
+		      runningstore = 6,
+		      runningstorethin = 10,
+		      runningstoremoments = 2,
+		      signident = TRUE,
+		      signswitch = FALSE, 
+		      interweaving = 4,
+		      quiet = FALSE,
+		      samplefac = TRUE,
+		      startfac,
+		      startpara,
+		      startlogvar,
+		      startlatent,
+		      startlogvar0,
+		      startlatent0,
+		      startfacload,
+		      expert
+		      ) {
  
+ # startlatent and startlogvar0 are being faded out
+ if (!missing("startlatent") || !missing("startlatent0")) {
+  warning("The arguments 'startlatent' and 'startlatent0' were renamed to 'startlogvar' and 'startlogvar0', respectively. Please use the new argument names.")
+  if (missing("startlogvar") && !missing("startlatent")) startlogvar <- startlatent
+  if (missing("startlogvar0") && !missing("startlatent0")) startlogvar0 <- startlatent0
+ }
+
  # Some error checking for y
  if (is(y, "fsvsim")) {
   y <- y[["y"]]
@@ -462,39 +525,74 @@ if (interweaving != 0 & interweaving != 1 & interweaving != 2 & interweaving != 
  cShrink <- priorng[1]
  dShrink <- priorng[2]
  
- if(!is.numeric(priorfacload)) {
-  stop("Argument 'priorfacload' must be numeric.")
+ if (!is.numeric(priorfacload) || any(priorfacload <= 0)) {
+  stop("Argument 'priorfacload' must be numeric and positive.")
+ }
+ if (!(priorfacloadtype %in% c("normal", "rowwiseng", "colwiseng", "dl"))) {
+  stop("Argument 'priorfacloadtype' must be one of: 'normal', 'rowwiseng',
+       'colwiseng', 'dl'.")
  }
 
  if(is.matrix(priorfacload)) {
-  if(nrow(priorfacload) != m || ncol(priorfacload) != factors || any(priorfacload < 0)) {
-   stop("If argument 'priorfacload' is a matrix, it must be of appropriate dimensions and nonnegative.")
+  if(nrow(priorfacload) != m || ncol(priorfacload) != factors) {
+   stop("If argument 'priorfacload' is a matrix, it must be of appropriate dimensions.")
   }
+  if (priorfacloadtype == "normal") {
+   pfl <- 1L
   starttau2 <- priorfacload^2
   aShrink <- NA
   cShrink <- NA
   dShrink <- NA
- } else {
-  if (!is.numeric(priorfacload) | length(priorfacload) != 1) {
-   stop("Argument 'priorfacload' (standard deviation of prior for facload) must be a single number or an appropriate matrix with nonnegative entries.")
+  } else if (priorfacloadtype == "rowwiseng") {
+   pfl <- 2L
+   starttau2 <- matrix(1, nrow = m, ncol = factors)
+   aShrink <- priorfacload[,1]
+   warning("Only first column of 'priorfacload' is used.'")
+   cShrink <- rep(cShrink, m)
+   dShrink <- rep(dShrink, m)
+  } else if (priorfacloadtype == "colwiseng") {
+   pfl <- 3L
+   starttau2 <- matrix(1, nrow = m, ncol = factors)
+   aShrink <- priorfacload[1,]
+   warning("Only first row of 'priorfacload' is used.'")
+   cShrink <- rep(cShrink, factors)
+   dShrink <- rep(dShrink, factors)
+  } else if (priorfacloadtype == "dl") {
+   pfl <- 4L
+   starttau2 <- matrix(1, nrow = m, ncol = factors)
+   aShrink <- priorfacload[1,1]
+   warning("Only first element of 'priorfacload' is used.'")
+   cShrink <- NA
+   dShrink <- NA
   }
-  # Hack: Values => 0 mean fixed variance, values < 0 mean -aShrink for NG-prior
-  if (priorfacload >= 0) {
+ } else {
+  if (length(priorfacload) != 1) {
+   stop("If argument 'priorfacload' isn't a matrix, it must be a single number.")
+  }
+  if (priorfacloadtype == "normal") {
+   pfl <- 1L
    starttau2 <- matrix(priorfacload^2, nrow = m, ncol = factors)
    aShrink <- NA
    cShrink <- NA
    dShrink <- NA
-  } else {
+  } else if (priorfacloadtype == "rowwiseng") {
+   pfl <- 2L
    starttau2 <- matrix(1, nrow = m, ncol = factors)
-   if (columnwise) {
-    aShrink <- rep(-priorfacload, factors)
+   aShrink <- rep(priorfacload, m)
+   cShrink <- rep(cShrink, m)
+   dShrink <- rep(dShrink, m)
+  } else if (priorfacloadtype == "colwiseng") {
+   pfl <- 3L
+   starttau2 <- matrix(1, nrow = m, ncol = factors)
+   aShrink <- rep(priorfacload, factors)
     cShrink <- rep(cShrink, factors)
     dShrink <- rep(dShrink, factors)
-   } else {
-    aShrink <- rep(-priorfacload, m)
-    cShrink <- rep(cShrink, m)
-    dShrink <- rep(dShrink, m)
-   }
+  } else if (priorfacloadtype == "dl") {
+   pfl <- 4L
+   starttau2 <- matrix(1, nrow = m, ncol = factors)
+   aShrink <- priorfacload
+   cShrink <- NA
+   dShrink <- NA
   }
  }
  
@@ -504,7 +602,7 @@ shrinkagepriors <- list(a = aShrink,
 
  # Some error checking for thin
  if (!is.numeric(thin) | thin < 1) {
-  stop("Argument 'thin' (thinning parameter for the latent log-variances and parameters) must be a single number >= 1.")
+  stop("Argument 'thin' (thinning parameter for the latent log variances and parameters) must be a single number >= 1.")
  } else {
   thin <- as.integer(thin)
  }
@@ -622,6 +720,8 @@ if (missing(startfacload)) {
 # if (factors >= 1) for (i in 1:factors) startfacload[i,] <- c(rep(1/i,i) + rnorm(i, sd=.1), rep(0,factors-i))
 # startfacload[-(1:factors),] <- 1/factors + rnorm((m-factors)*factors, sd=.1)
 } else {
+ if (factors == 1L && is.numeric(startfacload) && is.vector(startfacload) && length(startfacload) == m)
+  startfacload <- matrix(startfacload, ncol = 1L)
  if (!is.numeric(startfacload) || !is.matrix(startfacload) ||
      (nrow(startfacload) != m && factors >= 1) || ncol(startfacload) != factors)
   stop("Argument 'startfacload' must be a numeric matrix of dimension c(ncol(y), factors).")
@@ -633,57 +733,45 @@ if (missing(startfacload)) {
 		    phi = c(rep(.8, m), rep(.8, factors)) + pmin(rnorm(m + factors, sd=.06), .095),
 		    sigma = rep(.1, m + factors) + rgamma(m + factors, 1, 10)) 
  } else {
-  if (!is.list(startpara))
-   stop("Argument 'startpara' must be a list with three elements named 'mu', 'phi', 'sigma'.")
+  if (!is.numeric(startpara) || !is.matrix(startpara) || nrow(startpara) != 3 || ncol(startpara) != m + factors)
+   stop("Argument 'startpara' must be a numeric matrix of dimension c(3, ncol(y) + factors).")
   
-  if (!is.numeric(startpara[["mu"]]))
-   stop('Argument \'startpara[["mu"]]\' must exist and be numeric.')
-  
-  if (!is.numeric(startpara[["phi"]]))
-   stop('Argument \'startpara[["phi"]]\' must exist and be numeric.')
-  
-  if (any(abs(startpara[["phi"]]) >= 1))
-   stop('Argument \'startpara[["phi"]]\' must be between -1 and 1.')
-
-  if (!is.numeric(startpara[["sigma"]]))
-   stop('Argument \'startpara[["sigma"]]\' must exist and be numeric.')
-  
-  if (any(startpara[["sigma"]] <= 0))
-   stop('Argument \'startpara[["sigma"]]\' must be positive.')
-  
-  if (length(startpara[["mu"]]) != m) {
-   stop('Argument \'startpara[["mu"]]\' must be of length nrow(y).')
-  } else {
-   startpara[["mu"]] <- c(startpara[["mu"]], rep(0, factors))
+  if (any(startpara[1, m + seq_len(factors)] != 0)) {
+   warning("Some of the levels of the factor log variance starting values are different from zero. Setting those to zero for you.")
+   startpara[1, m + seq_len(factors)] <- 0
   }
   
-  if (length(startpara[["phi"]]) != factors + m)
-   stop('Argument \'startpara[["phi"]]\' must be of length nrow(y) + factors.')
-  
-  if (length(startpara[["sigma"]]) != factors + m)
-   stop('Argument \'startpara[["sigma"]]\' must be of length nrow(y) + factors.')
+  if (any(abs(startpara[2,]) >= 1))
+   stop("All elements of 'startpara[2,]' must be between -1 and 1.")
+
+  if (any(startpara[3,] <= 0))
+   stop("All elements of 'startpara[3,]' must be positive.")
+ 
+  startpara <- list(mu = startpara[1,], phi = startpara[2,], sigma = startpara[3,]) # this is what the sampler expects
  }
 
- # Some input checking for startlatent
- if (missing(startlatent)) {
-  startlatent <- matrix(startpara[["mu"]][1] + rnorm(n*(m + factors)), n, m + factors)
+ # Some input checking for startlogvar
+ if (missing(startlogvar)) {
+  startlogvar <- matrix(startpara[["mu"]][1] + rnorm(n*(m + factors)), n, m + factors)
  } else {
-  if (!is.numeric(startlatent) || !is.matrix(startlatent) ||
-      nrow(startlatent) != nrow(y) || ncol(startlatent) != factors + m)
-   stop("Argument 'startlatent' must be a numeric matrix of dimension c(nrow(y), factors + ncol(y)).")
+  if (!is.numeric(startlogvar) || !is.matrix(startlogvar) ||
+      nrow(startlogvar) != nrow(y) || ncol(startlogvar) != factors + m)
+   stop("Argument 'startlogvar' must be a numeric matrix of dimension c(nrow(y), ncol(y) + factors).")
  }
 
- if (missing(startlatent0)) {
-  startlatent0 <- startpara[["mu"]][1] + rnorm(m + factors)
+ if (missing(startlogvar0)) {
+  startlogvar0 <- startpara[["mu"]][1] + rnorm(m + factors)
  } else {
-  if (!is.numeric(startlatent0) || length(startlatent0) != (m + factors))
-   stop("Argument 'startlatent0' must be a vector of length factors + ncol(y).")
+  if (!is.numeric(startlogvar0) || length(startlogvar0) != (m + factors))
+   stop("Argument 'startlogvar0' must be a vector of length ncol(y) + factors.")
  }
 
 # Some input checking for startfac
 if (missing(startfac)) {
  startfac <- matrix(rnorm(factors*n, 0, sd=.1), nrow=factors)
 } else {
+ if (factors == 1L && is.numeric(startfac) && is.vector(startfac) && length(startfac) == n)
+  startfac <- matrix(startfac, nrow = 1L)
  if (!is.numeric(startfac) || !is.matrix(startfac) ||
      nrow(startfac) != factors || (ncol(startfac) != n && factors >= 1))
   stop("Argument 'startfac' must be a numeric matrix of dimension c(factors, nrow(y)).")
@@ -740,13 +828,32 @@ if (is.character(restrict)) {
  if (restrict == "auto") restr <- findrestrict(y, factors = factors)
 }
 
+if (length(samplefac) != 1L || !is.logical(samplefac)) {
+  stop("Argument 'samplefac' must be logical and of length one.")
+}
+
+if (!isTRUE(samplefac) && isTRUE(signswitch)) {
+  signswitch <- FALSE
+  warning("Turning sign switching off because 'samplefac' is set to FALSE.")
+}
+
+if (!isTRUE(samplefac) && interweaving != 0L) {
+  interweaving <- 0L
+  warning("Turning interweaving off because 'samplefac' is set to FALSE.")
+}
+
+if (!isTRUE(samplefac) && isTRUE(signident)) {
+  signident <- FALSE
+  warning("Turning ex-post sign-identification off because 'samplefac' is set to FALSE.")
+}
+
 restrinv <- matrix(as.integer(!restr), nrow = nrow(restr), ncol = ncol(restr))
 
 startval <- list(facload = startfacload,
 		 fac = startfac,
 		 para = startpara,
-		 latent = startlatent,
-		 latent0 = startlatent0,
+		 latent = startlogvar,
+		 latent0 = startlogvar0,
 		 tau2 = starttau2)
 
 auxstore <- FALSE
@@ -758,8 +865,8 @@ res <- .Call("sampler", t(y), draws, burnin, startval,
 	mhsteps, B011, B022, mhcontrol, gammaprior, 
 	myoffset, truncnormal,
 	restrinv, interweaving, signswitch, runningstore,
-	runningstorethin, runningstoremoments, columnwise,
-	heteroskedastic, priorhomoskedastic, priorh0,
+	runningstorethin, runningstoremoments, pfl,
+	heteroskedastic, priorhomoskedastic, priorh0, samplefac,
 	PACKAGE = "factorstochvol")
 
 res$y <- y
@@ -778,17 +885,19 @@ res$config <- list(draws = draws, burnin = burnin, thin = thin,
 				  mhsteps = mhsteps,
 				  B011 = B011, B022 = B022),
 		    startpara = startpara,
-		    startlatent = startlatent,
-		    startlatent0 = startlatent0,
+		    startlogvar = startlogvar,
+		    startlogvar0 = startlogvar0,
 		    startfacload = startfacload,
-		    startfac = startfac)
+		    startfac = startfac,
+                    samplefac = samplefac)
  res$priors <- list(priormu = priormu,
 		    priorphiidi = priorphiidi,
 		    priorphifac = priorphifac,
 		    priorsigmaidi = priorsigmaidi,
 		    priorsigmafac = priorsigmafac,
 		    priorfacload = priorfacload,
-		    priorng = priorng, columnwise = columnwise,
+		    priorfacloadtype = priorfacloadtype,
+		    priorng = priorng,
 		    priorh0idi = priorh0idi, priorh0fac = priorh0fac,
 		    priorhomoskedastic = priorhomoskedastic)
 
@@ -845,23 +954,23 @@ res$config <- list(draws = draws, burnin = burnin, thin = thin,
  
  if (runningstore >= 3L) {  # stored running factor sds, factors, and factor log variances
    res$runningstore$sd <- standardizer(force(array(unlist(res$runningstore$sd, FALSE, FALSE),
-     dim = c(dim(res$runningstore$h$mean), runningstoremoments),
+     dim = c(dim(res$runningstore$logvar$mean), runningstoremoments),
      dimnames = list(NULL, NULL, mynames))))
  } else {
    res$runningstore$sd <- NULL
  }
 
  if (runningstore >= 2L) {  # stored running factors and factor log variances
-   res$runningstore$f <- standardizer(force(array(unlist(res$runningstore$f, FALSE, FALSE),
-     dim = c(dim(res$runningstore$f$mean), runningstoremoments),
+   res$runningstore$fac <- standardizer(force(array(unlist(res$runningstore$fac, FALSE, FALSE),
+     dim = c(dim(res$runningstore$fac$mean), runningstoremoments),
      dimnames = list(NULL, NULL, mynames))))
  } else {
-   res$runningstore$f <- NULL
+   res$runningstore$fac <- NULL
  }
 
  if (runningstore >= 1L) {  # stored running factor log variances
-    res$runningstore$h <- standardizer(force(array(unlist(res$runningstore$h, FALSE, FALSE),
-      dim = c(dim(res$runningstore$h$mean), runningstoremoments),
+    res$runningstore$logvar <- standardizer(force(array(unlist(res$runningstore$logvar, FALSE, FALSE),
+      dim = c(dim(res$runningstore$logvar$mean), runningstoremoments),
       dimnames = list(NULL, NULL, mynames))))
  } else {
   res$runningstore <- NULL
@@ -874,12 +983,14 @@ res$config <- list(draws = draws, burnin = burnin, thin = thin,
  
  class(res) <- "fsvdraws"
 
+ if (signident) {
  if (!quiet) {
   cat("Ex-post sign-identification... ")
   flush.console()
  }
 
  res <- signident(res)
+ }
 
  if (!quiet) {
   cat("Done!\n")
@@ -913,7 +1024,7 @@ res$config <- list(draws = draws, burnin = burnin, thin = thin,
 #' }
 #' 
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' set.seed(1)
 #' sim <- fsvsim(n = 500, series = 4, factors = 1) # simulate 
 #' res <- fsvsample(sim$y, factors = 1) # estimate

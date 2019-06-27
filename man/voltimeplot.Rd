@@ -13,7 +13,7 @@ to \code{\link{fsvsample}}.}
 \item{these}{Index vector containing the time points to plot. Defaults
 to \code{seq_len(nrow(x$y))}, i.e., all timepoints.}
 
-\item{legend}{Where to position the \code{link{legend}}. 
+\item{legend}{Where to position the \code{\link{legend}}. 
 If set to NULL, labels will be put directly next to the series.
 Defaults to "topright".}
 
@@ -37,6 +37,7 @@ Other plotting: \code{\link{comtimeplot}},
   \code{\link{facloadpointplot}},
   \code{\link{facloadtraceplot}},
   \code{\link{logvartimeplot}},
-  \code{\link{paratraceplot}}, \code{\link{plot.fsvdraws}}
+  \code{\link{paratraceplot}}, \code{\link{plot.fsvdraws}},
+  \code{\link{plotalot}}
 }
 \concept{plotting}

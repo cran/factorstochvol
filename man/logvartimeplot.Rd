@@ -43,6 +43,6 @@ Other plotting: \code{\link{comtimeplot}},
   \code{\link{facloadpointplot}},
   \code{\link{facloadtraceplot}},
   \code{\link{paratraceplot}}, \code{\link{plot.fsvdraws}},
-  \code{\link{voltimeplot}}
+  \code{\link{plotalot}}, \code{\link{voltimeplot}}
 }
 \concept{plotting}

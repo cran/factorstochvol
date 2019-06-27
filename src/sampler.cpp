@@ -39,8 +39,9 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
   const SEXP restriction_in, const SEXP interweaving_in, 
   const SEXP signswitch_in, const SEXP runningstore_in,
   const SEXP runningstoreevery_in, const SEXP runningstoremoments_in,
-  const SEXP columnwise_in, const SEXP heteroskedastic_in,
-  const SEXP priorhomoskedastic_in, const SEXP priorh0_in) {
+  const SEXP pfl_in, const SEXP heteroskedastic_in,
+  const SEXP priorhomoskedastic_in, const SEXP priorh0_in,
+  const SEXP samplefac_in) {
 
  // note: SEXP to Rcpp conversion REUSES memory unless "clone"d
  // Rcpp to Armadillo conversion allocates NEW memory unless deact'd
@@ -60,11 +61,8 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
 
  const bool signswitch        = as<bool>(signswitch_in);
  const int runningstore      = as<int>(runningstore_in);
- const bool columnwise        = as<bool>(columnwise_in);
-
- NumericVector sv(heteroskedastic_in);
- NumericVector priorhomoskedastic(priorhomoskedastic_in);
- NumericVector priorh0(priorh0_in);
+ 
+ const bool samplefac        = as<bool>(samplefac_in);
 
  //current factor loadings matrix draws
  NumericMatrix curfacload = startval["facload"];
@@ -74,6 +72,17 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  const int r = curfacload.ncol(); // number of latent factors
  const int mpr = m + r;
 
+ // 1 = Normal, 2 = NG (rowwise), 3 = NG (colwise), 4 = DL
+ const int pfl = as<int>(pfl_in);
+ bool ngprior = false;
+ if (r > 0 && (pfl == 2 || pfl == 3)) ngprior = true;
+ bool columnwise = false;
+ if (r > 0 && pfl == 3) columnwise = true;
+ bool dlprior = false;
+ if (r > 0 && pfl == 4) dlprior = true;
+ NumericVector sv(heteroskedastic_in);
+ NumericVector priorhomoskedastic(priorhomoskedastic_in);
+ NumericVector priorh0(priorh0_in);
  IntegerMatrix restr(restriction_in);
  arma::imat armarestr(restr.begin(), restr.nrow(), restr.ncol(), false);
  
@@ -158,12 +167,6 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  const NumericVector cShrink = shrinkagepriors["c"];
  const NumericVector dShrink = shrinkagepriors["d"];
 
- bool ngprior;
- if (r > 0 && !NumericVector::is_na(aShrink(0))) {
-  ngprior = true;
- } else {
-  ngprior = false;
- }
 
  int nlambda;
  if (ngprior) {
@@ -188,7 +191,22 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
   }
  }
  
+ int unrestrictedelementcount = arma::accu(armarestr);
  arma::mat armatau2(curtau2.begin(), curtau2.nrow(), curtau2.ncol(), false);
+ double tauDL = 1.; // whatever
+ double tmpcounter4samplingtauDL;
+ arma::mat armapsiDL(m, r, arma::fill::zeros);  // used for DL prior
+ arma::mat armaphiDL(m, r, arma::fill::zeros);  // used for DL prior
+ arma::mat armaTDL(m, r, arma::fill::zeros);  // used for DL prior
+ for (int i = 0; i < m; i++) {
+  for (int j = 0; j < r; j++) {
+   if (armarestr(i,j) != 0) {
+    armapsiDL(i,j) = 1./unrestrictedelementcount;
+    armaphiDL(i,j) = 1./unrestrictedelementcount;
+    armaTDL(i,j) = 1./unrestrictedelementcount;
+   }
+  }
+ }
 
  // number of MCMC draws
  const int burnin = as<int>(burnin_in);
@@ -660,6 +678,24 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
      }
     }
    }
+   // should we employ the DL-prior?
+   if (dlprior) {
+    tmpcounter4samplingtauDL = 0;
+    for (int j = 0; j < r; j++) {
+     for (int k = 0; k < m; k++) {
+      if (armarestr(k,j) != 0) {
+       armapsiDL(k,j) = 1. / do_rgig1(-.5, 1, (armafacload(k,j)*armafacload(k,j)) / (tauDL * tauDL * armaphiDL(k,j) * armaphiDL(k,j)));
+       tmpcounter4samplingtauDL += fabs(armafacload(k,j))/armaphiDL(k,j);
+       armaTDL(k,j) = do_rgig1(aShrink[0] - 1., 2*fabs(armafacload(k,j)), 1);
+      }
+     }
+    }
+    //Rprintf("%f\n", tmpcounter4samplingtauDL);
+    //if (tmpcounter4samplingtauDL < 1.) Rprintf("THIS: %f\n", armaphiDL[0,0]);
+    tauDL = do_rgig1((aShrink[0] - 1.) * unrestrictedelementcount, 2. * tmpcounter4samplingtauDL, 1);
+    armaphiDL = armaTDL / accu(armaTDL);
+    armatau2 = armapsiDL % armaphiDL % armaphiDL * tauDL * tauDL;
+   }
   
    int oldpos = 0;
    for (int j = 0; j < m; j++) {
@@ -855,6 +891,7 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
   // STEP 3:
   // update the factors (T independent r-variate regressions with m observations)
 
+  if (samplefac) {
   armadraw2 = rnorm(r*T);
   for (int j = 0; j < T; j++) {
    
@@ -903,6 +940,7 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
      ::Rf_error("Error in run %i: Couldn't sample factors at time %i of %i", i+1, j+1, T);
    }
    }
+  }
   }
   
 
@@ -1013,23 +1051,23 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  }
  
  List retval = List::create(
-   Named("f") = f,
+   Named("facload") = facload,
+   Named("fac") = f,
+   Named("logvar") = h,
+   Named("logvar0") = h0,
    Named("para") = para,
    Named("mixprob") = mixprob,
    Named("mixind") = mixind,
-   Named("h0") = h0,
-   Named("h") = h,
-   Named("facload") = facload,
-   Named("y") = y,
    Named("lambda2") = lambda2,
    Named("tau2") = tau2,
+   Named("y") = y,
    Named("runningstore") = List::create(
-     Named("h") = List::create(
+     Named("logvar") = List::create(
        Named("mean") = hrunmean,
        Named("m2") = hrunm2,
        Named("m3") = hrunm3,
        Named("m4") = hrunm4),
-     Named("f") = List::create(
+     Named("fac") = List::create(
        Named("mean") = frunmean,
        Named("m2") = frunm2,
        Named("m3") = frunm3,

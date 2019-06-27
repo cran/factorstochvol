@@ -16,9 +16,13 @@ Structure containing the model-implied covariance matrix.
 }
 \description{
 Generic function for extracting model-implied covariance matrices, either
-from the MCMC output, or from the simulated model.
+from the MCMC output, or from the simulated model. Details about the
+function's behavior can be found in  \code{\link{covmat.fsvdraws}}
+(the function invoked when applied to MCMC output) or
+\code{\link{covmat.fsvsim}} (the function invoked when applied to a
+simulated model.
 }
 \seealso{
-covmat.fsvsample covmat.fsvsim
+Other generics: \code{\link{cormat}}
 }
 \concept{generics}

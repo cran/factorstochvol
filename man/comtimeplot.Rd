@@ -45,6 +45,6 @@ Other plotting: \code{\link{corimageplot}},
   \code{\link{facloadtraceplot}},
   \code{\link{logvartimeplot}},
   \code{\link{paratraceplot}}, \code{\link{plot.fsvdraws}},
-  \code{\link{voltimeplot}}
+  \code{\link{plotalot}}, \code{\link{voltimeplot}}
 }
 \concept{plotting}

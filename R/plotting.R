@@ -58,16 +58,16 @@ comtimeplot <- function(x, fsvsimobj = NULL, show = "series",
   thismean <- x$runningstore$com[,i,"mean"]
   thissd <- x$runningstore$com[,i,"sd"]
   ts.plot(cbind(thismean - 2*thissd, thismean, thismean + 2*thissd),
-	  col = c("gray", 1, "gray"), main = "", xlab = "", ylab = "",
+	  lwd = c(1, 2, 1), main = "", xlab = "", ylab = "",
 	  gpars = list(xaxt = 'n'), ylim = ylim)
   ats <- seq(1, n, len = 11)
   axis(1, labels = dates[ats], at = ats)
 
   if (i == m+1) {
-   mtext(paste0("Joint communalities (mean +/- 2sd)"), cex = 1.5, line = .3)
+   title(paste0("Joint communalities (mean +/- 2sd)"))
    if (!is.null(fsvsimobj)) lines(colMeans(communalities), col = 3)
   } else {
-   mtext(paste0("Communalities of series ", i, " (", snames[i], ", mean +/- 2sd)"), cex = 0.8)
+   title(paste0("Communalities of series ", i, " (", snames[i], ", mean +/- 2sd)"), font.main = 1)
    if (!is.null(fsvsimobj)) lines(communalities[i,], col = 3)
   }
  }
@@ -87,7 +87,7 @@ comtimeplot <- function(x, fsvsimobj = NULL, show = "series",
 #' to \code{\link{fsvsample}}.
 #' @param these Index vector containing the time points to plot. Defaults
 #' to \code{seq_len(nrow(x$y))}, i.e., all timepoints.
-#' @param legend Where to position the \code{link{legend}}. 
+#' @param legend Where to position the \code{\link{legend}}. 
 #' If set to NULL, labels will be put directly next to the series.
 #' Defaults to "topright".
 #' @param ... Additional parameters will be passed on to \code{\link{ts.plot}}.
@@ -106,7 +106,7 @@ if (!is(x, "fsvdraws")) stop("This function expects an 'fsvdraws' object.")
  }
  n <- nrow(x$y)
  m <- ncol(x$y)
- r <- dim(x$h)[2] - m
+ r <- dim(x$logvar)[2] - m
  draws <- dim(x$para)[3]
  snames <- colnames(x$y)
  dates <- rownames(x$y)
@@ -116,7 +116,7 @@ if (!is(x, "fsvdraws")) stop("This function expects an 'fsvdraws' object.")
  dat <- matrix(x$runningstore$vol[these,,"mean",drop = FALSE], nrow = length(these))
 # plotorder <- order(colMeans(dat))
  plotorder <- seq_len(ncol(dat))
- colas <- rainbow(m)
+ if (length(palette()) != m) colas <- rainbow(m) else colas <- seq_len(m)
 
  ts.plot(dat[,plotorder,drop = FALSE], gpars = list(col = colas, xaxt = 'n', xlab = '', ...))
  ats <- round(seq(1, length(these), length.out = min(length(these), 10)))
@@ -149,6 +149,8 @@ if (!is(x, "fsvdraws")) stop("This function expects an 'fsvdraws' object.")
 #' with the series ordering. Other keywords
 #' (e.g. \code{'hclust'}) will be forwarded to
 #' \code{\link[corrplot]{corrMatOrder}}.
+#' @param these4order Index vector containing the time points used for
+#' ordering. Probably, the default (\code{these}) is what you want.
 #' @param plotdatedist Numerical value indicating where the dates should
 #' be plotted.
 #' @param plotCI String. If not equal to 'n', posterior credible regions are
@@ -173,6 +175,7 @@ if (!is(x, "fsvdraws")) stop("This function expects an 'fsvdraws' object.")
 #' @export
 
 corimageplot <- function(x, these = seq_len(nrow(x$y)), order = "original",
+			 these4order = these,
 			 plotdatedist = 0, plotCI = 'n', date.cex = 1.5, col = NULL,
 			 fsvsimobj = NULL, plottype = "corrplot", ...) {
  type <- "cor"
@@ -185,7 +188,7 @@ corimageplot <- function(x, these = seq_len(nrow(x$y)), order = "original",
   stop("Correlations haven't been stored during sampling.")
  n <- nrow(x$y)
  m <- ncol(x$y)
- r <- dim(x$h)[2] - m
+ r <- dim(x$logvar)[2] - m
  draws <- dim(x$para)[3]
  snames <- colnames(x$y)
  dates <- rownames(x$y)
@@ -194,9 +197,9 @@ corimageplot <- function(x, these = seq_len(nrow(x$y)), order = "original",
  if (!is.numeric(these) || min(these) < 1 || max(these) > n) stop("Illegal argument value 'these'.")
  
  if (order != 'none' && order != 'original') {
-  orderthis <- matrix(NA_real_, nrow = length(these), ncol = m)
-  for (i in seq(along = these)) {
-   this <- runningcormat(x, these[i], type = type, statistic = "mean")
+  orderthis <- matrix(NA_real_, nrow = length(these4order), ncol = m)
+  for (i in seq(along = these4order)) {
+   this <- runningcormat(x, these4order[i], type = type, statistic = "mean")
    orderthis[i,] <- corrplot::corrMatOrder(this, order = order)
   }
  } else orderthis <- matrix(1:m, nrow = length(these), ncol = m, byrow = TRUE)
@@ -261,7 +264,6 @@ corimageplot <- function(x, these = seq_len(nrow(x$y)), order = "original",
 #' to \code{seq_len(nrow(x$y))}.
 #' @param type What to plot, usually "cor" or "cov".
 #' @param statistic Which posterior summary should be plotted, usually "mean".
-#' @param coldist Indicates how "different" adjacent colors should be.
 #' 
 #' @return Returns \code{x} invisibly.
 #' 
@@ -271,7 +273,7 @@ corimageplot <- function(x, these = seq_len(nrow(x$y)), order = "original",
 
 
 cortimeplot <- function(x, series, these = seq_len(nrow(x$y)),
-			type = "cor", statistic = "mean", coldist = 1) {
+			type = "cor", statistic = "mean") {
  if (!is(x, "fsvdraws")) stop("This function expects an 'fsvdraws' object.")
  if (!exists("runningstore", x) || !exists(type, x$runningstore))
   stop("What you are requesting (argument 'type') hasn't been stored during sampling.")
@@ -280,7 +282,7 @@ cortimeplot <- function(x, series, these = seq_len(nrow(x$y)),
  } else series <- as.integer(series)
  m <- ncol(x$y)
  n <- nrow(x$y)
- r <- dim(x$h)[2] - m
+ r <- dim(x$logvar)[2] - m
  draws <- dim(x$para)[3]
  snames <- colnames(x$y)
  dates <- rownames(x$y)
@@ -310,7 +312,9 @@ cortimeplot <- function(x, series, these = seq_len(nrow(x$y)),
  if (type == "cor") cornames <- snames[-series][colororder]
  if (type == "cov") cornames <- snames[colororder]
  
- colas <- rep(rainbow(m), coldist)[seq(1, coldist*(m), coldist)]
+
+ if (length(palette()) != m) colas <- rainbow(m) else colas <- seq_len(m)
+
  ts.plot(curcors, col = colas, gpars = list(xaxt = 'n', xlab = '', ylab = ''))
  title(paste0('Posterior ', statistic, ' of pairwise ', type, 's with ', snames[series]))
  abline(h = 0, lty = 3)
@@ -318,8 +322,9 @@ cortimeplot <- function(x, series, these = seq_len(nrow(x$y)),
  axis(1, labels = dates[these][myseq], at = myseq)
  text(-.018*length(these), curcors[1,], cornames, col = colas)
  text(1.018*length(these), curcors[nrow(curcors),], cornames, col = colas)
+ 
  par(oldpar)
-
+ 
  invisible(x)
 }
 
@@ -328,9 +333,9 @@ cortimeplot <- function(x, series, these = seq_len(nrow(x$y)),
 #' @export
 
 covtimeplot <- function(x, series, these = seq_len(nrow(x$y)),
-			type = "cov", statistic = "mean", coldist = 1) {
+			type = "cov", statistic = "mean") {
  cortimeplot(x = x, series = series, these = these, type = type,
-	     statistic = statistic, coldist = coldist)
+	     statistic = statistic)
 }
 
 
@@ -368,7 +373,11 @@ facloadpairplot <- function(x, maxpoints = 500, alpha = 20/maxpoints, cex = 3) {
 
  whiches <- matrix((1:(2*ceiling(r/2))-1) %% r + 1, nrow = 2)
  
- colas <- rainbow(m, alpha = min(alpha, 1))
+ alpha <- min(alpha, 1)
+ if (length(palette()) != m) oldpal <- palette(rainbow(m))
+ 
+ colas <- apply(sapply(palette(), col2rgb)/255, 2,
+                function (cc, alpha) rgb(cc[1], cc[2], cc[3], alpha = alpha), alpha)
 
  for (i in seq.int(ncol(whiches))) {
   tmp <- aperm(x$facload[,whiches[,i],plotthese], c(1,3,2))
@@ -382,6 +391,9 @@ facloadpairplot <- function(x, maxpoints = 500, alpha = 20/maxpoints, cex = 3) {
   abline(h = 0, lty = 3)
   abline(v = 0, lty = 3)
  }
+
+ if (exists("oldpal")) palette(oldpal)
+
  invisible(x)
 }
 
@@ -636,14 +648,14 @@ logvartimeplot <- function(x, fsvsimobj = NULL, show = "both", maxrows = 5) {
 
  oldpar <- par(mfrow = c(min(maxrows, max(r, 1)), 1), mgp = c(2, .5, 0), mar = c(1.5, 1.5, 1.5, 0.5))
 
- if (show == "both") thesei <- c(m + seq_len(r), 1:m)
+ if (show == "both") thesei <- c(m + seq_len(r), seq_len(m))
  else if (show == "fac") thesei <- m + seq_len(r)
- else if (show == "idi") thesei <- 1:m
+ else if (show == "idi") thesei <- seq_len(m)
 
  for (i in thesei) {
   if (i == 1) par(mfrow = c(min(maxrows, m), 1))
-  thismean <- x$runningstore$h[,i,"mean"]
-  thissd <- x$runningstore$h[,i,"sd"]
+  thismean <- x$runningstore$logvar[,i,"mean"]
+  thissd <- x$runningstore$logvar[,i,"sd"]
   ts.plot(cbind(thismean - 2*thissd, thismean, thismean + 2*thissd),
 	  lwd = c(1, 2, 1), main = "", xlab = "", ylab = "",
 	  gpars = list(xaxt = 'n'))
@@ -651,9 +663,9 @@ logvartimeplot <- function(x, fsvsimobj = NULL, show = "both", maxrows = 5) {
   axis(1, labels = dates[ats], at = ats)
 
   if (i <= m) {
-   mtext(paste0("Idiosyncratic log-variance of series ", i, " (", snames[i], ", mean +/- 2sd)"), cex = 0.8)
+   title(paste0("Idiosyncratic log-variance of series ", i, " (", snames[i], ", mean +/- 2sd)"), font.main = 1)
   } else {
-   mtext(paste("Log-variance of factor", i-m, "(mean +/- 2sd)"), cex = 0.8)
+   title(paste("Log-variance of factor", i-m, "(mean +/- 2sd)"), font.main = 1)
   }
   if (!is.null(fsvsimobj)) {
    if (i <= m) {
@@ -669,7 +681,7 @@ logvartimeplot <- function(x, fsvsimobj = NULL, show = "both", maxrows = 5) {
  invisible(x)
 }
 
-#' Trace plots of parameter draws
+#' Trace plots of parameter draws.
 #'
 #' \code{paratraceplot} draws trace plots of all parameters (\code{mu, phi,
 #' sigma}). Can be an important tool to check MCMC convergence if inference
@@ -682,14 +694,19 @@ logvartimeplot <- function(x, fsvsimobj = NULL, show = "both", maxrows = 5) {
 #' call to \code{\link{fsvsim}}).
 #' @param thinning Plot every \code{thinning}th draw.
 #' @param maxrows Indicates the maximum number of rows to be drawn per page.
+#' @param ... Ignored.
 #' 
 #' @return Returns \code{x} invisibly.
 #' 
 #' @family plotting
 #'
+#' @rdname paratraceplot
+#'
+#' @name paratraceplot
+#'
 #' @export
 
-paratraceplot <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows = 3) {
+paratraceplot.fsvdraws <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows = 3, ...) {
  if (!is(x, "fsvdraws")) stop("This function expects an 'fsvdraws' object.")
  m <- ncol(x$y)
  n <- nrow(x$y)
@@ -944,7 +961,7 @@ facloaddensplot <- function(x, fsvsimobj = NULL, rows = 5, thesecols = NULL, xli
  invisible(x)
 }
 
-#' Several factor SV plots
+#' Several factor SV plots useful for model diagnostics
 #'
 #' Draws a collection of plots to explore the posterior distribution
 #' of a fitted factor SV model.
@@ -962,13 +979,77 @@ facloaddensplot <- function(x, fsvsimobj = NULL, rows = 5, thesecols = NULL, xli
 #'
 #' @export
 
-plot.fsvdraws <- function(x, fsvsimobj = NULL, ...) {
+plotalot <- function(x, fsvsimobj = NULL, ...) {
+ if (!is(x, "fsvdraws")) stop("This function expects an 'fsvdraws' object.")
  r <- ncol(x$facload)
  if (r > 0) facloadpointplot(x, fsvsimobj = fsvsimobj, ...)
  logvartimeplot(x, fsvsimobj = fsvsimobj, ...)
  if (r > 0) facloaddensplot(x, fsvsimobj = fsvsimobj, ...)
  if (r > 0) facloadtraceplot(x, fsvsimobj = fsvsimobj, ...)
  paratraceplot(x, fsvsimobj = fsvsimobj, ...)
+}
+
+
+#' Default factor SV plot
+#'
+#' Displays the correlation matrix at the last sampling point in time.
+#'
+#' @param x Object of class \code{'fsvdraws'}, usually resulting from a call
+#' to \code{\link{fsvsample}}.
+#' @param quantiles Posterior quantiles to be visualized. Must be of length 1 or 3.
+#' @param fsvsimobj To indicate data generating values in case of simulated
+#' data, pass an optional object of type \code{fsvsim} (usually the result of a
+#' call to \code{\link{fsvsim}}).
+#' @param col Optional color palette.
+#' @param ... Other arguments will be passed on to \link[corrplot]{corrplot}.
+#' 
+#' @return Returns \code{x} invisibly.
+#' 
+#' @family plotting
+#'
+#' @export
+
+plot.fsvdraws <- function(x, quantiles = c(.05, .5, .95), col = NULL, fsvsimobj = NULL, ...) {
+ if (!is(x, "fsvdraws")) stop("This function expects an 'fsvdraws' object.")
+ if (!is.null(fsvsimobj)) {
+  if (!is(fsvsimobj, "fsvsim")) stop("If provided, argument 'fsvsimobj' must be an 'fsvsim' object.")
+ }
+ if (is.null(col)) {
+  colpal <- colorRampPalette(c("#67001F", "#B2182B", "#D6604D", "#F4A582", "#FDDBC7", 
+    "#FFFFFF", "#D1E5F0", "#92C5DE", "#4393C3", "#2166AC", "#053061"))
+  col <- rev(colpal(200))
+ }
+ effdraws <- dim(x$fac)[3]
+ n <- nrow(x$y)
+ m <- ncol(x$y)
+
+ mycormat <- cormat(x, "last")[,,,1]
+ if (length(quantiles) == 1) {
+   plotCI <- "n"
+   mycormatlower <- NULL
+   mycormatmed <- apply(mycormat, 1:2, quantile, quantiles)
+   mycormatupper <- NULL
+ } else if (length(quantiles) == 3) {
+   plotCI <- "circle"
+   mycormatlower <- apply(mycormat, 1:2, quantile, quantiles[1])
+   mycormatmed <- apply(mycormat, 1:2, quantile, quantiles[2])
+   mycormatupper <- apply(mycormat, 1:2, quantile, quantiles[3])
+ } else {
+   stop("Length of argument 'quantiles' must be one or three.")
+ }
+ 
+ corrplot::corrplot(mycormatmed, plotCI = plotCI, lowCI.mat = mycormatlower, uppCI.mat = mycormatupper, col = col)
+
+ if (!is.null(fsvsimobj)) {
+   cortrue <- cormat(fsvsimobj, n)[,,1]
+   diag(cortrue) <- NA
+   oldpar <- par(xpd = TRUE)
+   symbols(rep(1:m, each = m), rep(m:1, m),
+	   circles = .9*abs(as.numeric(cortrue))^0.5/2,
+	   fg = "green", inches = FALSE, add = TRUE)
+   par(oldpar)
+  }
+ invisible(x)
 }
 
 #' Plots pairwise correlations over time
@@ -1003,7 +1084,7 @@ corplot <- function(x, fsvsimobj = NULL, these = 1:(ncol(x$y)*(ncol(x$y)-1)/2), 
 
  m <- ncol(x$y)
  n <- nrow(x$y)
- r <- dim(x$h)[2] - m
+ r <- dim(x$logvar)[2] - m
  draws <- dim(x$para)[3]
  snames <- colnames(x$y)
  dates <- rownames(x$y)
@@ -1034,9 +1115,9 @@ corplot <- function(x, fsvsimobj = NULL, these = 1:(ncol(x$y)*(ncol(x$y)-1)/2), 
 
   whiches <- as.numeric(unlist(strsplit(dimnames(x$runningstore$cor)[[2]][i], "_")))
 
-  mtext(paste0("Estimated correlation of series ", whiches[2], " (",
+  title(paste0("Estimated correlation of series ", whiches[2], " (",
 	       snames[whiches[2]], ") and series ", whiches[1], " (",
-	       snames[whiches[1]], ") (mean +/- 2sd)"), cex = 0.8)
+	       snames[whiches[1]], ") (mean +/- 2sd)"))
   
   if (!is.null(fsvsimobj)) {
    lines(corelement(fsvsimobj, whiches[1], whiches[2], these = times), col = 3)
