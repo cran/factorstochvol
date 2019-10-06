@@ -427,7 +427,7 @@ from which several identification issues are apparent: the order, the sign, and 
 More specifically, for any generalized permutation matrix%
 \footnote{A generalized permutation matrix has the zero--non-zero pattern of a permutation matrix, but it is allowed to have any non-zero values instead of just ones.
 Hence, a generalized permutation matrix not only permutes but also scales and switches the sign of its multiplier.} %
-$\Permmat$ of size $\nfac\times\nfac$, we find another valid decomposition $\Sigmay_t=\Loadings^\prime\Sigmafac^\prime_t(\Loadings^\prime)^\top+\Sigmaidi_t$, where $\Loadings^\prime=\Loadings\Permmat^\top$ and
+$\Permmat$ of size $\nfac\times\nfac$, we find another valid decomposition $\Sigmay_t=\Loadings^\prime\Sigmafac^\prime_t(\Loadings^\prime)^\top+\Sigmaidi_t$, where $\Loadings^\prime=\Loadings\Permmat^{-1}$ and
 $\Sigmafac^\prime_t=\Permmat\Sigmafac_t\Permmat^\top$.
 We resolve the ambiguity in the scale of the factors by fixing the level of their log-variance to zero, i.e., $\mufac_j=0$ for $j=1,\dots,\nfac$.
 Sign and order identification can be enforced through restrictions on the factor loadings matrix $\Loadings$.
@@ -782,7 +782,7 @@ Running the sampler corresponds to invoking \fct{fsvsample}. Apart from the prio
 For our illustrative example, most settings are left at their default values. Only the number of factors is increased from one to two, instead of 1000 we sample 10000 draws, a thinning of 10 is used, and \code{quiet} is set to \code{TRUE}.
 
 <<runmodel, echo=2:3>>=
-set.seed(411104)
+set.seed(1)
 library(factorstochvol)
 res <- fsvsample(y, factors = 2, draws = 10000, thin = 10, quiet = TRUE)
 @

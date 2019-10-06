@@ -62,6 +62,7 @@ distclean: clean
 	rm -rf $(figdir)
 	rm -f $(outpdf)
 	rm -f $(srctex)
+	rm -f $(outr)
 
 .PHONY: show
 show: $(outpdf)

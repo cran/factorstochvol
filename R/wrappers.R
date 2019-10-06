@@ -165,10 +165,11 @@
 #'
 #' @param priorhomoskedastic Only used if at least one element of
 #' \code{heteroskedastic} is set to \code{FALSE}. In that case,
-#' \code{priorhomoskedastic} must be must be a matrix with positive entries
-#' and dimension c(factors + m, 2). Values in column 1 will be interpreted as
+#' \code{priorhomoskedastic} must be a matrix with positive entries
+#' and dimension c(m, 2). Values in column 1 will be interpreted as the
 #' shape and values in column 2 will be interpreted as the rate parameter
-#' of the corresponding inverse gamma prior distribution.
+#' of the corresponding inverse gamma prior distribution of the idisyncratic
+#' variances.
 #'
 #' @param expert \emph{optional} named list of expert parameters for the
 #' univariate SV models (will be passed to the \code{stochvol} package). For most
@@ -244,6 +245,12 @@
 #' latent factors.
 #' In case of a single factor model, a numeric vector of length \code{n} is also accepted.
 #'
+#' @param startfacloadvar \emph{optional} numeric matrix of dimension
+#' \code{c(m, factors)}, containing the starting values of the
+#' factor loadings variances \eqn{\tau_{ij}^2}. Used only when the normal-gamma
+#' prior is employed (priorfacloadtype != "normal") while ignored when static
+#' loadings variances are used (priorfacloadtype == "normal").
+#'
 #' @param samplefac If set to \code{FALSE}, the factors are not sampled (but 
 #' remain at their starting values forever). This might be useful if one
 #' wants to include observed factors instead of latent ones.
@@ -264,6 +271,8 @@
 #'  \item{\code{logvar0}: }{Array containing idiosyncratic and factor log variance draws.}
 #'  \item{\code{para}: }{Array containing parameter draws form the posterior distribution.}
 #'  \item{\code{y}: }{Matrix containing the data supplied.}
+#'  \item{\code{latestauxiliary}: }{List containing the latest draws of auxiliary quantities used for
+#'                      sampling the factor loadings matrix.}
 #'  \item{\code{runningstore}: }{List whose elements contain ergodic moments of certain
 #'                      variables of interest. See argument
 #'                      \code{runningstore} for details about what
@@ -363,6 +372,7 @@ fsvsample <- function(y,
 		      startlogvar0,
 		      startlatent0,
 		      startfacload,
+		      startfacloadvar,
 		      expert
 		      ) {
  
@@ -464,18 +474,20 @@ if (interweaving != 0 & interweaving != 1 & interweaving != 2 & interweaving != 
    interweaving <- 1L
   }
  }
+
  if (!all(heteroskedastic)) {
   if (any(is.na(priorhomoskedastic))) {
-   priorhomoskedastic <- matrix(c(1.1, 0.055), byrow = TRUE, nrow = factors + m, ncol = 2)
-   warning(paste0("Argument 'priorhomoskedastic' must be a matrix with dimension c(factors + m, 2)
+   priorhomoskedastic <- matrix(c(1.1, 0.055), byrow = TRUE, nrow = m, ncol = 2)
+   warning(paste0("Argument 'priorhomoskedastic' must be a matrix with dimension c(m, 2)
 		  if some of the elements of 'heteroskedastic' are FALSE. Setting priorhomoskedastic
 		  to c(", priorhomoskedastic[1], ", ", priorhomoskedastic[2], ")."))
   }
-  if (!is.matrix(priorhomoskedastic) || nrow(priorhomoskedastic) != (factors + m) ||
+  if (!is.matrix(priorhomoskedastic) || nrow(priorhomoskedastic) != m ||
       ncol(priorhomoskedastic) != 2 || any(priorhomoskedastic <= 0)) {
-   stop("Argument 'priorhomoskedastic' must be a matrix with positive entries and dimension c(factors + m, 2).")
+   stop("Argument 'priorhomoskedastic' must be a matrix with positive entries and dimension c(m, 2).")
   }
  }
+ priorhomoskedastic <- as.matrix(priorhomoskedastic)
  
  # Some error checking for the prior parameters 
  if (!is.numeric(priormu) | length(priormu) != 2) {
@@ -533,33 +545,44 @@ if (interweaving != 0 & interweaving != 1 & interweaving != 2 & interweaving != 
        'colwiseng', 'dl'.")
  }
 
+ if (!missing(startfacloadvar)) {
+  if (!is.numeric(startfacloadvar) || !is.matrix(startfacloadvar) || nrow(startfacloadvar) != m ||
+     ncol(startfacloadvar) != factors || any(startfacloadvar <= 0)) 
+   stop("If argument 'startfacloadvar' is provided, it must be a matrix of appropriate dimensions with positive real entries.")
+  if (priorfacloadtype == "normal")
+    warning("Because priorfacloadtype is 'normal', the values passed via 'startfacloadvar' are being ignored.")
+  startfacloadvarUsed <- startfacloadvar
+ } else {
+  startfacloadvarUsed <- matrix(1, nrow = m, ncol = factors)
+ }
+
  if(is.matrix(priorfacload)) {
   if(nrow(priorfacload) != m || ncol(priorfacload) != factors) {
    stop("If argument 'priorfacload' is a matrix, it must be of appropriate dimensions.")
   }
   if (priorfacloadtype == "normal") {
    pfl <- 1L
-  starttau2 <- priorfacload^2
-  aShrink <- NA
-  cShrink <- NA
-  dShrink <- NA
+   starttau2 <- priorfacload^2
+   aShrink <- NA
+   cShrink <- NA
+   dShrink <- NA
   } else if (priorfacloadtype == "rowwiseng") {
    pfl <- 2L
-   starttau2 <- matrix(1, nrow = m, ncol = factors)
+   starttau2 <- startfacloadvarUsed
    aShrink <- priorfacload[,1]
    warning("Only first column of 'priorfacload' is used.'")
    cShrink <- rep(cShrink, m)
    dShrink <- rep(dShrink, m)
   } else if (priorfacloadtype == "colwiseng") {
    pfl <- 3L
-   starttau2 <- matrix(1, nrow = m, ncol = factors)
+   starttau2 <- startfacloadvarUsed
    aShrink <- priorfacload[1,]
    warning("Only first row of 'priorfacload' is used.'")
    cShrink <- rep(cShrink, factors)
    dShrink <- rep(dShrink, factors)
   } else if (priorfacloadtype == "dl") {
    pfl <- 4L
-   starttau2 <- matrix(1, nrow = m, ncol = factors)
+   starttau2 <- startfacloadvarUsed
    aShrink <- priorfacload[1,1]
    warning("Only first element of 'priorfacload' is used.'")
    cShrink <- NA
@@ -577,19 +600,19 @@ if (interweaving != 0 & interweaving != 1 & interweaving != 2 & interweaving != 
    dShrink <- NA
   } else if (priorfacloadtype == "rowwiseng") {
    pfl <- 2L
-   starttau2 <- matrix(1, nrow = m, ncol = factors)
+   starttau2 <- startfacloadvarUsed
    aShrink <- rep(priorfacload, m)
    cShrink <- rep(cShrink, m)
    dShrink <- rep(dShrink, m)
   } else if (priorfacloadtype == "colwiseng") {
    pfl <- 3L
-   starttau2 <- matrix(1, nrow = m, ncol = factors)
+   starttau2 <- startfacloadvarUsed
    aShrink <- rep(priorfacload, factors)
     cShrink <- rep(cShrink, factors)
     dShrink <- rep(dShrink, factors)
   } else if (priorfacloadtype == "dl") {
    pfl <- 4L
-   starttau2 <- matrix(1, nrow = m, ncol = factors)
+   starttau2 <- startfacloadvarUsed
    aShrink <- priorfacload
    cShrink <- NA
    dShrink <- NA
@@ -813,7 +836,7 @@ if (!is.numeric(runningstoremoments) || length(runningstoremoments) != 1 || runn
 
 
 if (is.matrix(restrict)) {
- if (any(dim(restrict) != c(m, factors)) || any(is.na(restrict) || !is.logical(restrict)))
+ if (any(dim(restrict) != c(m, factors)) || any(is.na(restrict)) || !is.logical(restrict))
      stop("Argument 'restrict' must be an appropriate logical matrix or \"none\"/\"upper\"/\"auto\".")
  if (any(rowSums(restrict) == factors))
      stop("Argument 'restrict' can't have rows where all elements are TRUE.")
@@ -826,6 +849,10 @@ if (is.character(restrict)) {
  restr <- matrix(FALSE, nrow = m, ncol = factors)
  if (restrict == "upper") restr[upper.tri(restr)] <- TRUE
  if (restrict == "auto") restr <- findrestrict(y, factors = factors)
+}
+
+if (interweaving %in% c(1, 2) && any(diag(restr) == TRUE)) {
+  stop("Setting 'interweaving' to either 1 or 2 and restricting the diagonal elements of the factor loading matrix are not allowed at the same time.")
 }
 
 if (length(samplefac) != 1L || !is.logical(samplefac)) {
@@ -889,6 +916,7 @@ res$config <- list(draws = draws, burnin = burnin, thin = thin,
 		    startlogvar0 = startlogvar0,
 		    startfacload = startfacload,
 		    startfac = startfac,
+		    startfacloadvar = starttau2,
                     samplefac = samplefac)
  res$priors <- list(priormu = priormu,
 		    priorphiidi = priorphiidi,

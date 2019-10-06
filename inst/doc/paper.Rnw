@@ -1,6 +1,6 @@
 \documentclass[article,nojss]{jss}\usepackage[]{graphicx}\usepackage[]{color}
-%% maxwidth is the original width if it is less than linewidth
-%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+% maxwidth is the original width if it is less than linewidth
+% otherwise use linewidth (to make sure the graphics do not exceed the margin)
 \makeatletter
 \def\maxwidth{ %
   \ifdim\Gin@nat@width>\linewidth
@@ -425,7 +425,7 @@ from which several identification issues are apparent: the order, the sign, and 
 More specifically, for any generalized permutation matrix%
 \footnote{A generalized permutation matrix has the zero--non-zero pattern of a permutation matrix, but it is allowed to have any non-zero values instead of just ones.
 Hence, a generalized permutation matrix not only permutes but also scales and switches the sign of its multiplier.} %
-$\Permmat$ of size $\nfac\times\nfac$, we find another valid decomposition $\Sigmay_t=\Loadings^\prime\Sigmafac^\prime_t(\Loadings^\prime)^\top+\Sigmaidi_t$, where $\Loadings^\prime=\Loadings\Permmat^\top$ and
+$\Permmat$ of size $\nfac\times\nfac$, we find another valid decomposition $\Sigmay_t=\Loadings^\prime\Sigmafac^\prime_t(\Loadings^\prime)^\top+\Sigmaidi_t$, where $\Loadings^\prime=\Loadings\Permmat^{-1}$ and
 $\Sigmafac^\prime_t=\Permmat\Sigmafac_t\Permmat^\top$.
 We resolve the ambiguity in the scale of the factors by fixing the level of their log-variance to zero, i.e., $\mufac_j=0$ for $j=1,\dots,\nfac$.
 Sign and order identification can be enforced through restrictions on the factor loadings matrix $\Loadings$.
@@ -896,12 +896,12 @@ R> round(apply(cov_n, 1:2, coda::effectiveSize))
 \end{Sinput}
 \begin{Soutput}
      [,1] [,2] [,3] [,4] [,5] [,6]
-[1,] 1000 1000  899  744 1000 1000
-[2,] 1000 1000  566 1069 1000  817
-[3,]  899  566  825  512  335  342
-[4,]  744 1069  512  864  613  837
-[5,] 1000 1000  335  613 1097 1000
-[6,] 1000  817  342  837 1000 1000
+[1,]  365  866  632   79 1030 1058
+[2,]  866  860  271   72 1026 1070
+[3,]  632  271  592 1000 1000  836
+[4,]   79   72 1000 1000  911  258
+[5,] 1030 1026 1000  911 1000 1089
+[6,] 1058 1070  836  258 1089  890
 \end{Soutput}
 \end{Schunk}
 
@@ -1041,25 +1041,25 @@ R> predcor1 <- predcor(res)
 R> round(apply(predcor1[,,,1], 1:2, mean), 2)
 \end{Sinput}
 \begin{Soutput}
-      AUD  CAD   CHF   CZK  DKK  GBP
-AUD  1.00 0.61 -0.02  0.03 0.09 0.46
-CAD  0.61 1.00  0.08  0.01 0.11 0.51
-CHF -0.02 0.08  1.00 -0.03 0.03 0.09
-CZK  0.03 0.01 -0.03  1.00 0.00 0.01
-DKK  0.09 0.11  0.03  0.00 1.00 0.09
-GBP  0.46 0.51  0.09  0.01 0.09 1.00
+     AUD  CAD   CHF   CZK  DKK  GBP
+AUD 1.00 0.62  0.00  0.04 0.10 0.47
+CAD 0.62 1.00  0.08  0.02 0.11 0.51
+CHF 0.00 0.08  1.00 -0.04 0.03 0.10
+CZK 0.04 0.02 -0.04  1.00 0.00 0.01
+DKK 0.10 0.11  0.03  0.00 1.00 0.09
+GBP 0.47 0.51  0.10  0.01 0.09 1.00
 \end{Soutput}
 \begin{Sinput}
 R> round(apply(predcor1[,,,1], 1:2, sd), 2)
 \end{Sinput}
 \begin{Soutput}
      AUD  CAD  CHF  CZK  DKK  GBP
-AUD 0.00 0.15 0.18 0.04 0.07 0.16
-CAD 0.15 0.00 0.14 0.02 0.07 0.17
-CHF 0.18 0.14 0.00 0.04 0.03 0.11
-CZK 0.04 0.02 0.04 0.00 0.01 0.02
-DKK 0.07 0.07 0.03 0.01 0.00 0.06
-GBP 0.16 0.17 0.11 0.02 0.06 0.00
+AUD 0.00 0.16 0.18 0.04 0.08 0.17
+CAD 0.16 0.00 0.14 0.03 0.08 0.17
+CHF 0.18 0.14 0.00 0.05 0.04 0.12
+CZK 0.04 0.03 0.05 0.00 0.01 0.03
+DKK 0.08 0.08 0.04 0.01 0.00 0.07
+GBP 0.17 0.17 0.12 0.03 0.07 0.00
 \end{Soutput}
 \end{Schunk}
 
@@ -1091,7 +1091,7 @@ R> predloglik(res, matrix(0, nrow = 2, ncol = m), ahead = 1:2, each = 10)
 \end{Sinput}
 \begin{Soutput}
        1        2 
-5.126926 5.093654 
+5.168859 5.148709 
 \end{Soutput}
 \end{Schunk}
 
