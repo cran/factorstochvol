@@ -1,3 +1,26 @@
+#  #####################################################################################
+#  R package factorstochvol by
+#     Gregor Kastner Copyright (C) 2016-2020
+#     Darjus Hosszejni Copyright (C) 2019-2020
+#  
+#  This file is part of the R package factorstochvol: Bayesian Estimation
+#  of (Sparse) Latent Factor Stochastic Volatility Models
+#  
+#  The R package factorstochvol is free software: you can redistribute
+#  it and/or modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation, either version 2 or any
+#  later version of the License.
+#  
+#  The R package factorstochvol is distributed in the hope that it will
+#  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+#  of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+#  General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with the R package factorstochvol. If that is not the case,
+#  please refer to <http://www.gnu.org/licenses/>.
+#  #####################################################################################
+
 #' Pretty printing of an fsvsdraws object
 #'
 #' @param x Object of class \code{'fsvdraws'}, usually resulting from a call
@@ -643,6 +666,11 @@ predloglik <- function(x, y, ahead = 1, each = 1, alldraws = FALSE, indicator = 
  zeros <- matrix(0, nrow = m, ncol = n)
  for (i in seq_along(ahead)) {
   tmpy <- matrix(rep(y[i,], n), ncol = n)
+  
+  if (!is.null(x$beta)) {
+   tmpy <- tmpy - x$beta
+  }
+  
   ret[,i] <- vecdmvnorm(tmpy, zeros, predobj[,,,i], log = TRUE)
   numericnormalizer <- max(ret[,i]) - 700 # exp(700) should be fine as double
   realret[i] <- log(mean(exp(ret[,i] - numericnormalizer))) + numericnormalizer
@@ -718,8 +746,13 @@ predloglikWB <- function(x, y, ahead = 1, each = 1, alldraws = FALSE) {
   for (j in seq_len(dim(x$facload)[3])) {
    for (k in seq_len(each)) {
     tmp <- (j-1)*each+k
+    if (is.null(x$beta)) {
+      ytmp <- y[i,]
+    } else {
+      ytmp <- y[i,] - x$beta[,j]
+    }
     ret[tmp,i] <- 1/covinvdet$precisionlogdet[tmp,i] +
-                  crossprod(y[i,], covinvdet$precision[,,tmp,i]) %*% y[i,]
+                  crossprod(ytmp, covinvdet$precision[,,tmp,i]) %*% ytmp
    }
   }
   ret[,i] <- -(m/2) * log(2*pi) - .5 * ret[,i]
@@ -732,60 +765,6 @@ predloglikWB <- function(x, y, ahead = 1, each = 1, alldraws = FALSE) {
   return(realret)
  }
 }
-
-
-# OBSOLETE; is now implemented in C
-
-predcondOLD <- function(x, ahead = 1, each = 1, ...) {
- if (!is(x, "fsvdraws")) stop("Argument 'x' must be of class 'fsvdraws'.")
- if (!is.vector(ahead) | !is.numeric(ahead) | any(is.na(ahead)))
-  stop("Argument 'ahead' must be a numeric vector, NAs are not allowed.")
- ahead <- as.integer(ahead)
- ahead <- sort(ahead)
- if (any(ahead < 1)) stop("All elements of 'ahead' must be greater or equal to 1.")
- 
- each <- as.integer(each)
- if (length(each) > 1 || each < 1) stop("Argument 'each' must be greater or equal to 1.")
-
- m <- ncol(x$y)
- r <- nrow(x$fac)
-
- mus <- matrix(rep(x$para["mu",,], each), nrow = m + r)
- phis <- matrix(rep(x$para["phi",,], each), nrow = m + r)
- sigmas <- matrix(rep(x$para["sigma",,], each), nrow = m + r)
- hpredtmp <- matrix(rep(x$logvar[nrow(x$logvar),,], each), nrow = m + r)
-
- len <- ncol(sigmas)
- hpreds <- array(NA_real_, dim = c(m+r, len, length(ahead)))
- facpreds <- array(NA_real_, dim = c(r, len, length(ahead)))
- meanpreds <- array(NA_real_, dim = c(m, len, length(ahead)))
- 
- dimnames(hpreds) <- dimnames(meanpreds) <- list(NULL, NULL, ahead = ahead)
-
- storecounter <- 1L
- for (i in 1:max(ahead)) {
-  hpredtmp <- mus + phis * (hpredtmp - mus) + sigmas * rnorm(len*(m+r))
-  if (i %in% ahead) {
-   hpreds[,,storecounter] <- hpredtmp
-   facpreds[,,storecounter] <- exp(hpredtmp[m+seq_len(r),]/2) * rnorm(len*r)
-   if (r >= 1) {
-    for (j in 1:len) {  # SLOW!
-     meanpreds[,j,storecounter] <- matrix(x$facload[,,ceiling(j/each)], ncol=r) %*%
-                                   facpreds[,j,storecounter] 
-    }
-   } else {
-    meanpreds[,,storecounter] <- 0
-   }
-   storecounter <- storecounter + 1L
-  }
- }
-
- ret <- list(meanpreds, exp(hpreds[1:m,,,drop=FALSE]/2))
- names(ret) <- c("means", "vols")
- class(ret) <- c("fsvpredcond")
- ret
-}
-
 
 #' A posteriori sign identification
 #'

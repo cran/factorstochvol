@@ -3,23 +3,24 @@ Package: factorstochvol
 Type: Package
 Title: Bayesian Estimation of (Sparse) Latent Factor Stochastic
         Volatility Models
-Version: 0.9.3
+Version: 0.10.0
 Authors@R: c(
-	person("Gregor", "Kastner", role = c("aut", "cre"), email = "gregor.kastner@wu.ac.at", comment = c(ORCID = "0000-0002-8237-8271")),
+	person("Gregor", "Kastner", role = c("aut", "cre"), email = "gregor.kastner@aau.at", comment = c(ORCID = "0000-0002-8237-8271")),
 	person("Darjus", "Hosszejni", role = c("ctb"), email = "darjus.hosszejni@wu.ac.at", comment = c(ORCID = "0000-0002-3803-691X")))
 Description: Markov chain Monte Carlo (MCMC) sampler for fully Bayesian estimation of latent factor stochastic volatility models with interweaving <doi:10.1080/10618600.2017.1322091>. Sparsity can be achieved through the usage of Normal-Gamma priors on the factor loading matrix <doi:10.1016/j.jeconom.2018.11.007>.
 License: GPL (>= 2)
-Depends: R (>= 3.0.2), stochvol (>= 2.0.4)
+Depends: R (>= 3.0.2)
 Imports: GIGrvg (>= 0.4), Rcpp (>= 1.0.0), corrplot, methods,
-        grDevices, graphics, stats, utils
+        grDevices, graphics, stats, utils, stochvol (>= 3.0.0)
 Suggests: LSD (>= 4.0-0), coda (>= 0.19-2), knitr, RColorBrewer,
         testthat (>= 2.1.0)
-LinkingTo: Rcpp, RcppArmadillo (>= 0.7.500.0.0), stochvol
-RoxygenNote: 6.1.1
+LinkingTo: Rcpp, RcppArmadillo (>= 0.9.900), stochvol
+RoxygenNote: 7.1.1
+VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2019-10-06 13:15:42 UTC; dejot
+Packaged: 2020-11-06 10:27:43 UTC; dejot
 Author: Gregor Kastner [aut, cre] (<https://orcid.org/0000-0002-8237-8271>),
   Darjus Hosszejni [ctb] (<https://orcid.org/0000-0002-3803-691X>)
-Maintainer: Gregor Kastner <gregor.kastner@wu.ac.at>
+Maintainer: Gregor Kastner <gregor.kastner@aau.at>
 Repository: CRAN
-Date/Publication: 2019-10-06 14:10:02 UTC
+Date/Publication: 2020-11-09 10:20:06 UTC

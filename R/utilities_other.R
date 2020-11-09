@@ -1,3 +1,26 @@
+#  #####################################################################################
+#  R package factorstochvol by
+#     Gregor Kastner Copyright (C) 2016-2020
+#     Darjus Hosszejni Copyright (C) 2019-2020
+#  
+#  This file is part of the R package factorstochvol: Bayesian Estimation
+#  of (Sparse) Latent Factor Stochastic Volatility Models
+#  
+#  The R package factorstochvol is free software: you can redistribute
+#  it and/or modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation, either version 2 or any
+#  later version of the License.
+#  
+#  The R package factorstochvol is distributed in the hope that it will
+#  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+#  of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+#  General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with the R package factorstochvol. If that is not the case,
+#  please refer to <http://www.gnu.org/licenses/>.
+#  #####################################################################################
+
 #' Computes the log returns of a vector-valued time series
 #'
 #' \code{logret} computes the log returns of a multivariate time
@@ -19,7 +42,6 @@
 #' @rdname logret
 #' @name logret
 #' @export
-
 logret.matrix <- function(dat, demean = FALSE, standardize = FALSE, ...) {
  tmp <- dat[,colSums(is.na(dat)) <= 0.5]
  tmp <- diff(log(as.matrix(tmp)))
@@ -32,11 +54,18 @@ logret.matrix <- function(dat, demean = FALSE, standardize = FALSE, ...) {
 #' @rdname logret
 #' @name logret
 #' @export
-
 logret.data.frame <- function(dat, demean = FALSE, standardize = FALSE, ...) {
  dat <- data.matrix(dat)
  logret(dat, demean, standardize, ...)
 }
+
+#' @rdname logret
+#' @name logret
+#' @export
+logret <- function(dat, demean = FALSE, standardize = FALSE, ...) {
+ UseMethod("logret")
+}
+
 
 
 #' Ledermann bound for the number of factors
@@ -53,7 +82,6 @@ logret.data.frame <- function(dat, demean = FALSE, standardize = FALSE, ...) {
 #' @seealso preorder
 #'
 #' @export
-
 ledermann <- function(m) {
  as.integer(floor((2*m+1)/2 - sqrt((2*m+1)^2/4 - m^2 + m)))
 }
@@ -92,7 +120,6 @@ ledermann <- function(m) {
 #' @seealso ledermann 
 #'
 #' @export
-
 preorder <- function(dat, factors = ledermann(ncol(dat)), type = "fixed", transload = identity) {
  m <- ncol(dat)
  control <- list(opt = list(maxit = 100000)) 
@@ -151,7 +178,6 @@ preorder <- function(dat, factors = ledermann(ncol(dat)), type = "fixed", transl
 #' @seealso ledermann 
 #'
 #' @export
-
 findrestrict <- function(dat, factors, transload = abs, relto = 'all') {
  m <- ncol(dat)
  control <- list(opt = list(maxit = 100000)) 
@@ -193,7 +219,6 @@ findrestrict <- function(dat, factors, transload = abs, relto = 'all') {
 #' @return A \code{m} times \code{m} covariance matrix estimate.
 #'
 #' @export
-
 expweightcov <- function(dat, alpha = 4/126, hist = 180) {
  n <- nrow(dat)
  mycov <- tcrossprod(dat[n - hist + 1,])

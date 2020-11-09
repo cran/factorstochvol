@@ -5,17 +5,46 @@
 \title{Markov Chain Monte Carlo (MCMC) Sampling for the Factor Stochastic
 Volatility Model.}
 \usage{
-fsvsample(y, factors = 1, draws = 1000, thin = 1, burnin = 1000,
-  restrict = "none", priorfacloadtype = "rowwiseng",
-  priorfacload = 0.1, priorng = c(1, 1), priormu = c(0, 10),
-  priorphiidi = c(10, 3), priorphifac = c(10, 3), priorsigmaidi = 1,
-  priorsigmafac = 1, priorh0idi = "stationary",
-  priorh0fac = "stationary", keeptime = "last",
-  heteroskedastic = TRUE, priorhomoskedastic = NA, runningstore = 6,
-  runningstorethin = 10, runningstoremoments = 2, signident = TRUE,
-  signswitch = FALSE, interweaving = 4, quiet = FALSE,
-  samplefac = TRUE, startfac, startpara, startlogvar, startlatent,
-  startlogvar0, startlatent0, startfacload, startfacloadvar, expert)
+fsvsample(
+  y,
+  factors = 1,
+  draws = 1000,
+  thin = 1,
+  burnin = 1000,
+  restrict = "none",
+  designmatrix = NA,
+  priorfacloadtype = "rowwiseng",
+  priorfacload = 0.1,
+  priorng = c(1, 1),
+  priormu = c(0, 10),
+  priorphiidi = c(10, 3),
+  priorphifac = c(10, 3),
+  priorsigmaidi = 1,
+  priorsigmafac = 1,
+  priorh0idi = "stationary",
+  priorh0fac = "stationary",
+  priorbeta = c(0, 10000),
+  keeptime = "last",
+  heteroskedastic = TRUE,
+  priorhomoskedastic = NA,
+  runningstore = 6,
+  runningstorethin = 10,
+  runningstoremoments = 2,
+  signident = TRUE,
+  signswitch = FALSE,
+  interweaving = 4,
+  quiet = FALSE,
+  samplefac = TRUE,
+  startfac,
+  startpara,
+  startlogvar,
+  startlatent,
+  startlogvar0,
+  startlatent0,
+  startfacload,
+  startfacloadvar,
+  expert
+)
 }
 \arguments{
 \item{y}{Data matrix. Each of \code{m} columns is assumed to contain a single
@@ -48,6 +77,12 @@ logical matrix
 of dimension \code{c(m, r)} indicating which elements should be unrestricted
 (where \code{restrict} is \code{FALSE}) or zero (where \code{restrict} is
 \code{TRUE}).}
+
+\item{designmatrix}{regression design matrix for modeling the mean. Currently
+only a constant mean is implemented for each univariate series.
+Must be \code{NA}, in which case the mean is not modeled, or the character
+string \code{"ar0"}, in which case a constant mean is included in the model
+for each of the \code{m} univariate series.}
 
 \item{priorfacloadtype}{Can be \code{"normal"}, \code{"rowwiseng"}, 
 \code{"colwiseng"}.
@@ -110,6 +145,11 @@ If an element of
 \code{priorh0fac} is the string 'stationary', the prior of the corresponding
 initial log volatility is taken to be from the stationary distribution, i.e.
 h0 is assumed to be Gaussian with mean 0 and variance $sigma^2/(1-phi^2)$.}
+
+\item{priorbeta}{numeric vector of length 2, indicating the mean and
+standard deviation of the Gaussian prior for the regression parameters. The
+default value is \code{c(0, 10000)}, which constitutes a very vague prior
+for many common datasets. Not used if \code{designmatrix} is \code{NA}.}
 
 \item{keeptime}{Either a number coercible to a positive integer, or a string
 equal to "all" or "last". If a number different from 1 is provided, only every
@@ -235,9 +275,9 @@ prior is employed (priorfacloadtype != "normal") while ignored when static
 loadings variances are used (priorfacloadtype == "normal").}
 
 \item{expert}{\emph{optional} named list of expert parameters for the
-univariate SV models (will be passed to the \code{stochvol} package). For most
+univariate SV models (will be transformed and passed to the \code{stochvol} package). For most
 applications, the default values probably work best. Interested users are
-referred to Kastner and Frühwirth-Schnatter (2014) and Kastner (2016). If
+referred to Kastner and Frühwirth-Schnatter (2014), the package vignette, and Kastner (2016). If
 \code{expert} is provided, it may contain the following named elements:
 \itemize{
  \item{\code{parameterization}: }{Character string equal to \code{"centered"},
@@ -314,12 +354,13 @@ can be found in Kastner and Frühwirth-Schnatter (2014).
 data(exrates, package = "stochvol")
 exrates$date <- NULL
 
-# Compute the de-meaned percentage log returns:
-dat <- 100 * logret(exrates, demean = TRUE)
+# Compute the percentage log returns:
+dat <- 100 * logret(exrates)
 
 # We are going to fit a one-factor model so the ordering is irrelevant
 # NOTE that these are very few draws, you probably want more...
-res <- fsvsample(dat, factors = 1, draws = 2000, burnin = 1000, runningstore = 6)
+res <- fsvsample(dat, factors = 2, draws = 2000, burnin = 1000,
+  runningstore = 6, designmatrix = "ar0")
 
 voltimeplot(res)
 
@@ -328,6 +369,7 @@ corimageplot(res, nrow(dat), plotCI = 'circle')
 oldpar <- par(ask = TRUE)
 plot(res)
 par(oldpar)
+pairs(t(res$beta[1:4, ]))
 }
 
 }

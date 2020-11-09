@@ -1,3 +1,27 @@
+/*
+ * R package stochvol by
+ *     Gregor Kastner Copyright (C) 2016-2020
+ *     Darjus Hosszejni Copyright (C) 2019-2020
+ *  
+ *  This file is part of the R package factorstochvol: Bayesian Estimation
+ *  of (Sparse) Latent Factor Stochastic Volatility Models
+ *  
+ *  The R package factorstochvol is free software: you can redistribute
+ *  it and/or modify it under the terms of the GNU General Public License
+ *  as published by the Free Software Foundation, either version 2 or any
+ *  later version of the License.
+ *  
+ *  The R package factorstochvol is distributed in the hope that it will
+ *  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+ *  of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ *  General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU General Public License
+ *  along with the R package factorstochvol. If that is not the case,
+ *  please refer to <http://www.gnu.org/licenses/>.
+ */
+
+#include <RcppArmadillo.h>
 #include "sampler.h"
 
 using namespace Rcpp;
@@ -29,7 +53,8 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
   const SEXP burnin_in, const SEXP startval_in,
   const SEXP bmu_in, const SEXP Bmu_in,
   const SEXP priorphi_in, const SEXP Bsigma_in,
-  const SEXP shrinkagepriors_in,
+  const SEXP priorbeta_in,
+  const SEXP model_mean_in, const SEXP shrinkagepriors_in,
   const SEXP thin_in, const SEXP auxstore_in,
   const SEXP thintime_in,
   const SEXP quiet_in, const SEXP para_in,
@@ -57,12 +82,18 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  // 5 = "shallow interweaving" (random element)
  // 6 = "deep interweaving" (random element)
  
- const int interweaving       = as<int>(interweaving_in);
+ const int interweaving = as<int>(interweaving_in);
 
- const bool signswitch        = as<bool>(signswitch_in);
- const int runningstore      = as<int>(runningstore_in);
+ const bool signswitch  = as<bool>(signswitch_in);
+ const int runningstore = as<int>(runningstore_in);
  
- const bool samplefac        = as<bool>(samplefac_in);
+ const bool samplefac   = as<bool>(samplefac_in);
+
+ const bool model_mean  = as<bool>(model_mean_in);
+
+ /*
+  * LOOP STORAGE (current_* variables)
+  */
 
  //current factor loadings matrix draws
  NumericMatrix curfacload = startval["facload"];
@@ -97,7 +128,9 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  }
 
  //convention: "arma"-prefixed variables denote Armadillo proxy objects
- arma::mat armay(y.begin(), m, T, false);
+ const arma::mat armay_original(y.begin(), m, T, false);
+ arma::mat armay = armay_original;  //(armay_original.begin(), m, T, model_mean);  // demeaned
+ arma::mat armay_regression = armay;
  arma::mat armafacload(curfacload.begin(), m, r, false);
  arma::mat armafacloadt = arma::trans(armafacload);
 
@@ -154,7 +187,7 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  }
 
  //current mixture indicator draws
- IntegerMatrix curmixind(T, mpr);
+ arma::umat curmixind(T, mpr);
  
  //current mixture probability draws
  NumericVector curmixprob(10 * T * mpr);
@@ -183,6 +216,15 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  
  //current shrinkage variances tau^2
  NumericMatrix curtau2 = startval["tau2"];
+
+ // current regression betas
+ // note that only single regression is implemented
+ NumericVector curbeta(m); curbeta.fill(0);
+ arma::vec armabeta(curbeta.begin(), curbeta.size(), false);
+
+ /*
+  * MARKOV CHAIN AND MODEL SETUP
+  */
  
  // restriction on factor loadings matrix:
  for (int i = 0; i < curtau2.nrow(); i++) {
@@ -226,6 +268,8 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  const double a0fac     = priorphi(2);
  const double b0fac     = priorphi(3);
  const NumericVector Bsigma(Bsigma_in);
+
+ const NumericVector priorbeta(priorbeta_in);
  
  //std::fill(armatau2.begin(), armatau2.end(), 1.);
  
@@ -247,6 +291,26 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  const double MHcontrol       = as<double>(mhcontrol_in);
  const int MHsteps            = as<int>(MHsteps_in);
  const int parameterization   = as<int>(para_in);
+ const stochvol::ExpertSpec_FastSV expert_idi {
+   parameterization > 2,  // interweave
+   stochvol::Parameterization::CENTERED,  // centered_baseline always
+   B011inv,
+   B022inv,
+   MHsteps,
+   MHcontrol < 0 ? stochvol::ExpertSpec_FastSV::ProposalSigma2::INDEPENDENCE : stochvol::ExpertSpec_FastSV::ProposalSigma2::LOG_RANDOM_WALK,
+   MHcontrol,
+   truncnormal ? stochvol::ExpertSpec_FastSV::ProposalPhi::REPEATED_ACCEPT_REJECT_NORMAL : stochvol::ExpertSpec_FastSV::ProposalPhi::IMMEDIATE_ACCEPT_REJECT_NORMAL
+ };
+ const stochvol::ExpertSpec_FastSV expert_fac {
+   parameterization > 2,  // interweave
+   stochvol::Parameterization::CENTERED,  // centered_baseline always
+   B011inv,
+   B022inv,
+   3,
+   MHcontrol < 0 ? stochvol::ExpertSpec_FastSV::ProposalSigma2::INDEPENDENCE : stochvol::ExpertSpec_FastSV::ProposalSigma2::LOG_RANDOM_WALK,
+   MHcontrol,
+   truncnormal ? stochvol::ExpertSpec_FastSV::ProposalPhi::REPEATED_ACCEPT_REJECT_NORMAL : stochvol::ExpertSpec_FastSV::ProposalPhi::IMMEDIATE_ACCEPT_REJECT_NORMAL
+ };
 
  // offset (only used in zero-factor model)
  const double offset          = as<double>(offset_in);
@@ -264,7 +328,36 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
   if (MHsteps == 2) cT = c0 + (T+1)/2.0;  // pre-calculation outside the loop
   else return LogicalVector::create(NA_LOGICAL);  // not implemented!
  }
+
+ // prior specification object for stochvol
+ std::vector<stochvol::PriorSpec> prior_specs(mpr);
+ {
+   using stochvol::PriorSpec;
+   for (int j = 0; j < m; j++) {
+     prior_specs[j] = {
+       (priorh0(j) <= 0) ? PriorSpec::Latent0() : PriorSpec::Latent0(PriorSpec::Constant(priorh0(j))),
+         PriorSpec::Mu(PriorSpec::Normal(bmu, std::sqrt(Bmu))),
+         PriorSpec::Phi(PriorSpec::Beta(a0idi, b0idi)),
+         Gammaprior ? PriorSpec::Sigma2(PriorSpec::Gamma(0.5, 0.5 / Bsigma(j))) : PriorSpec::Sigma2(PriorSpec::InverseGamma(2.5, C0(j))),
+         PriorSpec::Nu(PriorSpec::Infinity()),
+         PriorSpec::Rho(PriorSpec::Constant(0)),
+         PriorSpec::Covariates(PriorSpec::MultivariateNormal{{priorbeta[0]}, {std::pow(priorbeta[1], -2)}})
+     };
+   }
+   for (int j = m; j < mpr; j++) {
+     prior_specs[j] = {
+       (priorh0(j) <= 0) ? PriorSpec::Latent0() : PriorSpec::Latent0(PriorSpec::Constant(priorh0(j))),
+         PriorSpec::Mu(PriorSpec::Constant(0)),
+         PriorSpec::Phi(PriorSpec::Beta(a0fac, b0fac)),
+         Gammaprior ? PriorSpec::Sigma2(PriorSpec::Gamma(0.5, 0.5 / Bsigma(j))) : PriorSpec::Sigma2(PriorSpec::InverseGamma(2.5, C0(j)))
+     };
+   }
+ }
  
+ /* 
+  * FINAL STORAGE (returned to R)
+  */
+
  // NOTE: (Almost) all storage of MCMC draws is done in NumericVectors
  // because no 'array' structure is available at this point in time.
  
@@ -469,7 +562,7 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  if (auxstore) mixind.attr("dim") = Dimension(T, mpr, draws/thin);
  
  // mixprob holds the mixture probabilities for the auxmix
- NumericVector mixprob(10 * T * mpr * auxstoresize);
+ //NumericVector mixprob(10 * T * mpr * auxstoresize);
  //mixprob.attr("dim") = Dimension(10, T, mpr, draws/thin); no 4-dim possible?
 
  // lambda2 holds the latent lambda^2 draws
@@ -485,6 +578,14 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  // para holds the parameter draws (mu, phi, sigma)
  NumericVector para(3 * mpr * (draws/thin));
  para.attr("dim") = Dimension(3, mpr, draws/thin) ;
+
+ // beta holds the beta draws
+ NumericVector beta(model_mean * m * (draws/thin));
+ beta.attr("dim") = Dimension(model_mean * m, draws/thin);
+
+ /*
+  * TEMPORARY STORAGE
+  */
   
  // curynorm will hold log((y - facload %*% f)^2) in STEP 1
  NumericMatrix curynorm(y.nrow(), y.ncol());
@@ -551,16 +652,17 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  // draw2 will hold some random draws in STEP 3
  NumericVector draw2(r*T);
  arma::colvec armadraw2(draw2.begin(), draw2.length(), false);
- 
- // we always use the centered parameterization as baseline
- // (for compatibility reasons with stochvol)
- const bool centered_baseline = true;
 
  int effi = -burnin;
  int effirunningstore = 0;
 
- // RNGScope scope;
- GetRNGstate(); // "by hand" because RNGScope isn't safe if return
+ // temporary variables for the updated stochvol code
+ arma::mat curpara_arma(curpara.begin(), curpara.nrow(), curpara.ncol(), false);
+ arma::mat curh_arma(curh.begin(), curh.nrow(), curh.ncol(), false);
+ arma::vec beta_j(1);
+
+ RNGScope scope;
+ //GetRNGstate(); // "by hand" because RNGScope isn't safe if return
                 // variables are declared afterwards
 
  for (int j = m; j < mpr; j++) {
@@ -572,17 +674,15 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
  int space4print = floor(log10(N + .1)) + 1;
  int doevery = ceil((2000.*N)/((r+1)*T*m));
 
- // temporary variables for the updated stochvol code
- arma::mat curpara_arma(curpara.begin(), curpara.nrow(), curpara.ncol(), false);
- arma::mat curh_arma(curh.begin(), curh.nrow(), curh.ncol(), false);
- arma::mat curmixprob_arma(curmixprob.begin(), 10*T, mpr, false);
- arma::imat curmixind_arma(curmixind.begin(), curmixind.nrow(), curmixind.ncol(), false);
-
  for (int i = 0; i < N; i++, effi++) {  // BEGIN main MCMC loop
   
   if (verbose && (i % doevery == 0)) {
    Rprintf("\r********* Iteration %*i of %*i (%3.0f%%) *********",
     space4print, i+1, space4print, N, 100.*(i+1)/N);
+  }
+
+  if (i % 20 == 0) {
+    ::R_CheckUserInterrupt();
   }
 
   // "linearized residuals"
@@ -606,13 +706,15 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
   for (int j = 0; j < m; j++) {
    if (sv(j) == true) {
      double curh0j = curh0(j);
-     arma::vec curpara_j = curpara_arma.unsafe_col(j);
      arma::vec curh_j = armah.unsafe_col(j);
-     arma::vec curmixprob_j = curmixprob_arma.unsafe_col(j);
-     arma::ivec curmixind_j = curmixind_arma.unsafe_col(j);
-     stochvol::update_sv(armaynorm.row(j).t(), curpara_j, curh_j, curh0j, curmixprob_j, curmixind_j,
-           centered_baseline, C0(j), cT, Bsigma(j), a0idi, b0idi, bmu, Bmu, B011inv, B022inv, Gammaprior,
-           truncnormal, MHcontrol, MHsteps, parameterization, false, priorh0(j));
+     arma::uvec curmixind_j = curmixind.unsafe_col(j);
+     double mu = curpara_arma.at(0, j),
+            phi = curpara_arma.at(1, j),
+            sigma = curpara_arma.at(2, j);
+     stochvol::update_fast_sv(armaynorm.row(j).t(), mu, phi, sigma, curh0j, curh_j, curmixind_j, prior_specs[j], expert_idi);
+     curpara_arma.at(0, j) = mu;
+     curpara_arma.at(1, j) = phi;
+     curpara_arma.at(2, j) = sigma;
      curh0(j) = curh0j;
    } else {
      double rss;
@@ -630,13 +732,15 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
   for (int j = m; j < mpr; j++) {
    if (sv(j) == true) {
      double curh0j = curh0(j);
-     arma::vec curpara_j = curpara_arma.unsafe_col(j);
      arma::vec curh_j = armah.unsafe_col(j);
-     arma::vec curmixprob_j = curmixprob_arma.unsafe_col(j);
-     arma::ivec curmixind_j = curmixind_arma.unsafe_col(j);
-     stochvol::update_sv(armafnorm.row(j-m).t(), curpara_j, curh_j, curh0j, curmixprob_j, curmixind_j,
-         centered_baseline, C0(j), cT, Bsigma(j), a0fac, b0fac, bmu, Bmu, B011inv, B022inv, Gammaprior,
-         truncnormal, MHcontrol, MHsteps, parameterization, true, priorh0(j));
+     arma::uvec curmixind_j = curmixind.unsafe_col(j);
+     double mu = 0,  //curpara_arma.at(0, j),
+            phi = curpara_arma.at(1, j),
+            sigma = curpara_arma.at(2, j);
+     stochvol::update_fast_sv(armafnorm.row(j-m).t(), mu, phi, sigma, curh0j, curh_j, curmixind_j, prior_specs[j], expert_fac);
+     curpara_arma.at(0, j) = 0;
+     curpara_arma.at(1, j) = phi;
+     curpara_arma.at(2, j) = sigma;
      curh0(j) = curh0j;
    }
   }
@@ -756,7 +860,7 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
    // calculate posterior mean:
    armamean.head(activecols) = armaSigma.submat(0, 0, activecols-1, activecols-1) *
                                 armaXt.submat(0, 0, activecols-1, T-1) *
-	                        armaytilde;
+                                armaytilde;
    
    // draw from the r-variate normal distribution
    
@@ -879,7 +983,7 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
    // Rprintf("ACCEPT? ");
 
     //ACCEPT/REJECT
-    if (log(as<double>(runif(1))) < logacceptrate) {
+    if (log(::unif_rand()) < logacceptrate) {
 //    Rprintf("ACC col %i el %02i - ", j+1, userow+1);
      curh(_, m+j) = hopen - mu_prop;
      curh0(m+j) = h0open - mu_prop;
@@ -897,7 +1001,7 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
   // update the factors (T independent r-variate regressions with m observations)
 
   if (samplefac) {
-  armadraw2 = rnorm(r*T);
+  armadraw2.imbue(::norm_rand);
   for (int j = 0; j < T; j++) {
    
    // transposed design matrix Xt2 (r x m) is filled "manually"
@@ -959,12 +1063,29 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
    }
   }
 
+  // REGRESSION (only single regression)
+  if (model_mean) {
+   if (r > 0) {
+    armay_regression = armay_original - armafacload * armaf;
+   }
+   for (int j = 0; j < m; j++) {
+    const arma::vec expmh2 = arma::exp(-.5*armah.col(j));
+    beta_j[0] = armabeta[j];
+    stochvol::update_regressors(armay_regression.row(j).t() % expmh2, expmh2, beta_j, prior_specs[j]);
+    armabeta[j] = beta_j[0];
+   }
+
+  // de-meaned observations
+  armay = armay_original;
+  armay.each_col() -= armabeta;
+  }
+
   // STORAGE:
   if (effi >= 0) {
    if (effi % thin == (thin - 1)) {
    store(curfacload, facload, curf, f, curh, h, curh0, h0,
-     curpara, para, curlambda2, lambda2, curtau2, tau2, curmixprob,
-     mixprob, curmixind, mixind, auxstore, thintime, (i-burnin)/thin);
+     curpara, para, curlambda2, lambda2, curtau2, tau2, curbeta,
+     beta, curmixind, mixind, auxstore, thintime, (i-burnin)/thin);
    }
  //Rprintf("\n");
  //for (int is = 0; is < m; is++) Rprintf("%f %f\n", facload(i*m*r+is), facload(i*m*r+m+is));
@@ -1061,13 +1182,11 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
    Named("logvar") = h,
    Named("logvar0") = h0,
    Named("para") = para,
-   Named("mixprob") = mixprob,
+   Named("beta") = beta,
    Named("mixind") = mixind,
    Named("lambda2") = lambda2,
    Named("tau2") = tau2,
    Named("latestauxiliary") = List::create(
-//     Named("mixprob") = curmixprob,
-//     Named("mixind") = curmixind,
      Named("lambda2") = curlambda2,
      Named("facloadvar") = curtau2),
    Named("y") = y,
@@ -1106,9 +1225,7 @@ RcppExport SEXP sampler(const SEXP y_in, const SEXP draws_in,
        Named("mean") = comrunmean,
        Named("m2") = comrunm2,
        Named("m3") = comrunm3,
-       Named("m4") = comrunm4)
-    )
-  );
- PutRNGstate();
+       Named("m4") = comrunm4)));
+ //PutRNGstate();
  return retval;
 }
