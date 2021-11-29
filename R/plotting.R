@@ -1,31 +1,32 @@
 #  #####################################################################################
 #  R package factorstochvol by
-#     Gregor Kastner Copyright (C) 2016-2020
-#     Darjus Hosszejni Copyright (C) 2019-2020
-#  
+#     Gregor Kastner Copyright (C) 2016-2021
+#     Darjus Hosszejni Copyright (C) 2019-2021
+#     Luis Gruber Copyright (C) 2021
+#
 #  This file is part of the R package factorstochvol: Bayesian Estimation
 #  of (Sparse) Latent Factor Stochastic Volatility Models
-#  
+#
 #  The R package factorstochvol is free software: you can redistribute
 #  it and/or modify it under the terms of the GNU General Public License
 #  as published by the Free Software Foundation, either version 2 or any
 #  later version of the License.
-#  
+#
 #  The R package factorstochvol is distributed in the hope that it will
 #  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
 #  of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 #  General Public License for more details.
-#  
+#
 #  You should have received a copy of the GNU General Public License
 #  along with the R package factorstochvol. If that is not the case,
 #  please refer to <http://www.gnu.org/licenses/>.
 #  #####################################################################################
 
-#' Plot comunalities over time.
+#' Plot communalities over time.
 #'
 #' \code{comtimeplot} plots the communalities over time, i.e. the
 #' series-specific percentage of variance explained through the common factors.
-#' 
+#'
 #' This function displays the joint (average) communalities over time and all
 #' series-specific communalities. If communalities haven't been stored during
 #' sampling, \code{comtimeplot} produces an error.
@@ -40,9 +41,9 @@
 #' in each plot. Defaults to 5.
 #' @param ylim Vector of length two denoting the range of the horizontal axis.
 #' Defaults to 1.
-#' 
+#'
 #' @return Returns \code{x} invisibly.
-#' 
+#'
 #' @family plotting
 #'
 #' @import methods
@@ -104,18 +105,18 @@ comtimeplot <- function(x, fsvsimobj = NULL, show = "series",
 #' series-specific conditional standard deviations. If these haven't been
 #' stored during sampling (because \code{runningstore} has been set too low),
 #' \code{voltimeplot} throws a warning.
-#' 
+#'
 #' @param x Object of class \code{'fsvdraws'}, usually resulting from a call
 #' to \code{\link{fsvsample}}.
 #' @param these Index vector containing the time points to plot. Defaults
 #' to \code{seq_len(nrow(x$y))}, i.e., all timepoints.
-#' @param legend Where to position the \code{\link{legend}}. 
+#' @param legend Where to position the \code{\link{legend}}.
 #' If set to NULL, labels will be put directly next to the series.
 #' Defaults to "topright".
 #' @param ... Additional parameters will be passed on to \code{\link{ts.plot}}.
-#' 
+#'
 #' @return Returns \code{x} invisibly.
-#' 
+#'
 #' @family plotting
 #'
 #' @export
@@ -142,7 +143,7 @@ if (!is(x, "fsvdraws")) stop("This function expects an 'fsvdraws' object.")
  ts.plot(dat[,plotorder,drop = FALSE], gpars = list(col = colas, xaxt = 'n', xlab = '', ...))
  ats <- round(seq(1, length(these), length.out = min(length(these), 10)))
  axis(1, at = ats, labels = dates[these][ats])
- 
+
  mynames <- snames[plotorder]
  if (!is.null(legend)) {
   legend(legend, legend = mynames, col = colas, ncol = 2, lty = 1, lwd = 2)
@@ -157,7 +158,7 @@ if (!is(x, "fsvdraws")) stop("This function expects an 'fsvdraws' object.")
 #'
 #' \code{corimageplot} plots the model-implied correlation matrices
 #' for one or several points in time.
-#' 
+#'
 #' @note If correlations haven't been stored during sampling,
 #' \code{corimageplot} produces an error.
 #'
@@ -188,9 +189,9 @@ if (!is(x, "fsvdraws")) stop("This function expects an 'fsvdraws' object.")
 #' @param ... Additional parameters will be passed on to
 #' \code{\link[corrplot]{corrplot}}. Ignored if \code{plottype} is
 #' "imageplot".
-#' 
+#'
 #' @return Returns \code{x} invisibly.
-#' 
+#'
 #' @family plotting
 #'
 #' @export
@@ -211,11 +212,12 @@ corimageplot <- function(x, these = seq_len(nrow(x$y)), order = "original",
  r <- dim(x$logvar)[2] - m
  draws <- dim(x$para)[3]
  snames <- colnames(x$y)
+ if (is.null(snames)) snames <- 1:m
  dates <- rownames(x$y)
  if (is.null(dates)) dates <- 1:n
 
  if (!is.numeric(these) || min(these) < 1 || max(these) > n) stop("Illegal argument value 'these'.")
- 
+
  if (order != 'none' && order != 'original') {
   orderthis <- matrix(NA_real_, nrow = length(these4order), ncol = m)
   for (i in seq(along = these4order)) {
@@ -228,21 +230,22 @@ corimageplot <- function(x, these = seq_len(nrow(x$y)), order = "original",
  orderthis <- as.integer(unlist(strsplit(orderthis, " ")))
 
  if (is.null(col)) {
-  colpal <- colorRampPalette(c("#67001F", "#B2182B", "#D6604D", "#F4A582", "#FDDBC7", 
+  colpal <- colorRampPalette(c("#67001F", "#B2182B", "#D6604D", "#F4A582", "#FDDBC7",
     "#FFFFFF", "#D1E5F0", "#92C5DE", "#4393C3", "#2166AC", "#053061"))
   col <- rev(colpal(200))
  }
 
  for (i in these) {
   toplot <- runningcormat(x, i, type = type, statistic = "mean")
+  rownames(toplot) <- colnames(toplot) <- snames
   if (!(plotCI == 'n')) {
    toplot2 <- runningcormat(x, i, type = type, statistic = "sd")
-   lower <- toplot - 2*toplot2
-   upper <- toplot + 2*toplot2
+   lower <- pmax(toplot - 2 * toplot2, -1)
+   upper <- pmin(toplot + 2 * toplot2, 1)
+   rownames(lower) <- colnames(lower) <- snames
+   rownames(upper) <- colnames(upper) <- snames
   } else lower <- upper <- NULL
 
-  rownames(toplot) <- colnames(toplot) <- snames
-  
   if (plottype == "corrplot") {
    corrplot::corrplot(toplot[orderthis, orderthis], plotCI = plotCI,
 		      lowCI.mat = lower[orderthis, orderthis],
@@ -252,7 +255,7 @@ corimageplot <- function(x, these = seq_len(nrow(x$y)), order = "original",
   } else if (plottype == "imageplot") {
    image(toplot[orderthis, orderthis])
   }
-  
+
   if (!is.null(fsvsimobj)) {
    cortrue <- cov2cor(covmat(fsvsimobj, i)[,,1])
    diag(cortrue) <- NA
@@ -271,7 +274,7 @@ corimageplot <- function(x, these = seq_len(nrow(x$y)), order = "original",
 #' Plot correlations over time.
 #'
 #' \code{cortimeplot} draws correlations over time.
-#' 
+#'
 #' This function displays one component series' time-varying correlations with
 #' the other components series. Throws an error if correlations haven't been
 #' stored during sampling.
@@ -284,9 +287,9 @@ corimageplot <- function(x, these = seq_len(nrow(x$y)), order = "original",
 #' to \code{seq_len(nrow(x$y))}.
 #' @param type What to plot, usually "cor" or "cov".
 #' @param statistic Which posterior summary should be plotted, usually "mean".
-#' 
+#'
 #' @return Returns \code{x} invisibly.
-#' 
+#'
 #' @family plotting
 #'
 #' @export
@@ -317,19 +320,19 @@ cortimeplot <- function(x, series, these = seq_len(nrow(x$y)),
  tryCatch(meancors <- tmp[these,,statistic], error = function(e)
 	   stop(paste0("Argument 'statistic' must be one of: ",
             paste(dimnames(tmp)[[3]], collapse = ', '), ".")))
- 
+
  curind1 <- grep(paste0('^', series, '_'), colnames(meancors))
  curind2 <- grep(paste0('_', series, '$'), colnames(meancors))
- 
+
  if (type == "cor") curind <- c(curind1, curind2)
  if (type == "cov") curind <- curind2
- 
+
  colororder <- order(colMeans(meancors[,curind]))
  curcors <- meancors[,curind[colororder]]
- 
+
  if (type == "cor") cornames <- snames[-series][colororder]
  if (type == "cov") cornames <- snames[colororder]
- 
+
 
  if (length(palette()) != m) colas <- rainbow(m) else colas <- seq_len(m)
 
@@ -340,9 +343,9 @@ cortimeplot <- function(x, series, these = seq_len(nrow(x$y)),
  axis(1, labels = dates[these][myseq], at = myseq)
  text(-.018*length(these), curcors[1,], cornames, col = colas)
  text(1.018*length(these), curcors[nrow(curcors),], cornames, col = colas)
- 
+
  par(oldpar)
- 
+
  invisible(x)
 }
 
@@ -358,10 +361,10 @@ covtimeplot <- function(x, series, these = seq_len(nrow(x$y)),
 
 #' Displays bivariate marginal posterior distributions of factor loadings.
 #'
-#' \code{facloadpairplot} illustrates the bivariate marginals of the 
+#' \code{facloadpairplot} illustrates the bivariate marginals of the
 #' factor loadings distribution. For a monochrome variant, see
 #' \code{\link{facloadcredplot}}.
-#' 
+#'
 #' @param x Object of class \code{'fsvdraws'}, usually resulting from a call
 #' to \code{\link{fsvsample}}.
 #' @param maxpoints The maximum amount of posterior draws to plot. If
@@ -369,16 +372,16 @@ covtimeplot <- function(x, series, these = seq_len(nrow(x$y)),
 #' thinned accordingly.
 #' @param alpha Level of transparency.
 #' @param cex Controls the size of the dots.
-#' 
+#'
 #' @return Returns \code{x} invisibly.
-#' 
+#'
 #' @family plotting
 #'
 #' @export
 facloadpairplot <- function(x, maxpoints = 500, alpha = 20/maxpoints, cex = 3) {
  if (!is(x, "fsvdraws")) stop("This function expects an 'fsvdraws' object.")
  if (any(dim(x$facload) < 2)) stop("Currently implemented for two or more factors.")
- 
+
  m <- ncol(x$y)
  n <- nrow(x$y)
  r <- dim(x$facload)[2]
@@ -388,10 +391,10 @@ facloadpairplot <- function(x, maxpoints = 500, alpha = 20/maxpoints, cex = 3) {
  means <- apply(x$facload, 1:2, mean)
 
  whiches <- matrix((1:(2*ceiling(r/2))-1) %% r + 1, nrow = 2)
- 
+
  alpha <- min(alpha, 1)
  if (length(palette()) != m) oldpal <- palette(rainbow(m))
- 
+
  colas <- apply(sapply(palette(), col2rgb)/255, 2,
                 function (cc, alpha) rgb(cc[1], cc[2], cc[3], alpha = alpha), alpha)
 
@@ -415,47 +418,47 @@ facloadpairplot <- function(x, maxpoints = 500, alpha = 20/maxpoints, cex = 3) {
 
 #' Displays bivariate marginal posterior distribution of factor loadings.
 #'
-#' \code{facloadcredplot} illustrates the bivariate marginals of the 
+#' \code{facloadcredplot} illustrates the bivariate marginals of the
 #' factor loadings distribution. It is a monochrome variant of
 #' \code{\link{facloadpairplot}}.
-#' 
+#'
 #' @param x Object of class \code{'fsvdraws'}, usually resulting from a call
 #' to \code{\link{fsvsample}}.
 #' @param quants Posterior quantiles to be plotted.
-#' 
+#'
 #' @return Returns \code{x} invisibly.
-#' 
+#'
 #' @family plotting
 #'
 #' @export
 facloadcredplot <- function(x, quants = c(.01, .99)) {
  if (!is(x, "fsvdraws")) stop("This function expects an 'fsvdraws' object.")
  if (any(dim(x$facload) < 2)) stop("Currently implemented for two or more factors.")
- 
+
  m <- ncol(x$y)
  n <- nrow(x$y)
  r <- dim(x$facload)[2]
  draws <- dim(x$facload)[3]
 
  whiches <- matrix((1:(2*ceiling(r/2))-1) %% r + 1, nrow = 2)
- 
+
  lower <- apply(x$facload, 1:2, quantile, quants[1])
  upper <- apply(x$facload, 1:2, quantile, quants[2])
  med <- apply(x$facload, 1:2, median)
 
  for (i in seq.int(ncol(whiches))) {
-  myxlim <- range(lower[,whiches[1,i]], upper[,whiches[1,i]]) 
+  myxlim <- range(lower[,whiches[1,i]], upper[,whiches[1,i]])
   myylim <- range(lower[,whiches[2,i]], upper[,whiches[2,i]])
   xbreak <- .02*diff(myxlim)
   ybreak <- .02*diff(myylim)
-  plot(med[,whiches[,i]], pch = "", 
+  plot(med[,whiches[,i]], pch = "",
        xlab = paste("Loadings on Factor", whiches[1,i]),
        ylab = paste("Loadings on Factor", whiches[2,i]),
        xlim = myxlim, ylim = myylim)
   for (j in 1:m) {
    lines(c(lower[j,whiches[1,i]], med[j,whiches[1,i]] - xbreak), rep(med[j,whiches[2,i]], 2))
    lines(c(med[j,whiches[1,i]] + xbreak, upper[j,whiches[1,i]]), rep(med[j,whiches[2,i]], 2))
-   
+
    lines(rep(med[j,whiches[1,i]], 2), c(lower[j,whiches[2,i]], med[j,whiches[2,i]] - ybreak))
    lines(rep(med[j,whiches[1,i]], 2), c(med[j,whiches[2,i]] + ybreak, upper[j,whiches[2,i]]))
   }
@@ -470,7 +473,7 @@ facloadcredplot <- function(x, quants = c(.01, .99)) {
 #'
 #' \code{facloadpointplot} illustrates point estimates (mean, median, ...)
 #' of the estimated factor loadings matrix.
-#' 
+#'
 #' @param x Object of class \code{'fsvdraws'}, usually resulting from a call
 #' to \code{\link{fsvsample}}.
 #' @param fsvsimobj To indicate data generating values in case of simulated
@@ -485,10 +488,10 @@ facloadcredplot <- function(x, quants = c(.01, .99)) {
 #' @param col Vector of length \code{m} (number of component series),
 #' containing \code{\link[grDevices]{rgb}}-type color codes used for
 #' plotting. Will be recycled if necessary.
-#' 
+#'
 #' @return Returns \code{x} invisibly, throws a warning if there aren't any
 #' factors to plot.
-#' 
+#'
 #' @family plotting
 #'
 #' @export
@@ -499,7 +502,7 @@ facloadpointplot <- function(x, fsvsimobj = NULL, statistic = "median",
   warning("There aren't any factor loadings to plot.")
   invisible(x)
  }
- 
+
  if (!is.null(fsvsimobj)) {
   if (!is(fsvsimobj, "fsvsim")) stop("If provided, argument 'fsvsimobj' must be an 'fsvsim' object.")
   rtrue <- ncol(fsvsimobj$facload)
@@ -570,7 +573,7 @@ facloadpointplot <- function(x, fsvsimobj = NULL, statistic = "median",
  }
 
 # oldpar <- par(mgp = c(1.7, .5, 0), mar = c(2.7, 2.7, 2, 0.5))
- 
+
  if (r == 1)  {
   myplot <- barplot(facloads, main = paste("Posterior", statistic, "of factor loadings"),
 		    ylab = "Loadings", xlab = "Component series", names = 1:m)
@@ -615,7 +618,7 @@ facloadpointplot <- function(x, fsvsimobj = NULL, statistic = "median",
 #' Plot log-variances over time.
 #'
 #' \code{logvartimeplot} plots the idiosyncratic and factor log-variances over time.
-#' 
+#'
 #' This function displays the posterior distribution (\code{mean +/- 2sd})
 #' of log-variances of both
 #' the factors and the idiosyncratic series.
@@ -632,9 +635,9 @@ facloadpointplot <- function(x, fsvsimobj = NULL, statistic = "median",
 #' If set to "both", factor log-volatilities will be drawn first, followed
 #' by the idiosyncratic log-volatilities.
 #' @param maxrows Indicates the maximum number of rows to be drawn per page.
-#' 
+#'
 #' @return Returns \code{x} invisibly.
-#' 
+#'
 #' @family plotting
 #'
 #' @export
@@ -698,7 +701,7 @@ logvartimeplot <- function(x, fsvsimobj = NULL, show = "both", maxrows = 5) {
 #' \code{paratraceplot} draws trace plots of all parameters (\code{mu, phi,
 #' sigma}). Can be an important tool to check MCMC convergence if inference
 #' about (certain) parameters is sought.
-#' 
+#'
 #' @param x Object of class \code{'fsvdraws'}, usually resulting from a call
 #' to \code{\link{fsvsample}}.
 #' @param fsvsimobj To indicate data generating values in case of simulated
@@ -721,12 +724,12 @@ paratraceplot.fsvdraws <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows
  if (is.null(thinning)) thinning <- ceiling(draws/10000)
  plotwhich <- seq(1, draws, by = thinning)
  snames <- colnames(x$y)
- 
+
  if (!is.null(fsvsimobj)) {
   if (!is(fsvsimobj, "fsvsim")) stop("If provided, argument 'fsvsimobj' must be an 'fsvsim' object.")
   rtrue <- ncol(fsvsimobj$facload)
  }
- 
+
  oldpar <- par(mgp = c(2, .5, 0), mar = c(0, 7.4, 0, 2))
  effrows <- min(r, maxrows)
  layout(matrix(1:(3*effrows+2), nrow = 3*effrows+2), heights = c(.075, rep(c(.40, .40, .10)/effrows, effrows), .025))
@@ -736,7 +739,7 @@ paratraceplot.fsvdraws <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows
    plot.new()
    text(.5, .7, paste("Parameter draws of factor log-variances with plotthin =", thinning), cex = 1.5, xpd = TRUE)
   }
-  
+
   plot(x$para[2,m+j,plotwhich], type = "l", main = "", xlab = "", ylab = "", yaxt = 'n', xaxt = 'n')
   if (!is.null(fsvsimobj)) {
    if(j <= rtrue) {
@@ -745,13 +748,13 @@ paratraceplot.fsvdraws <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows
     legend("topleft", "true value DNE")
    }
   }
-  
+
   if (j %% effrows == 1) axis(3)
   axis(4)
   axis(2, labels = FALSE)
   mtext(bquote(phi[.(j+m)]), 2, las = 2, line = 2)
   mtext(paste0("Fac", j), 2, las = 2, line = 3.7, padj = (14/effrows), xpd = TRUE)
-  
+
   plot(x$para[3,m+j,plotwhich], type = "l", main = "", xlab = "", ylab = "", yaxt = 'n', xaxt = 'n')
   if (!is.null(fsvsimobj)) {
    if (j <= rtrue) {
@@ -760,7 +763,7 @@ paratraceplot.fsvdraws <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows
     legend("topleft", "true value DNE")
    }
   }
-  
+
   axis(2)
   axis(4, labels = FALSE)
   mtext(bquote(sigma[.(j+m)]), 2, las = 2, line = 2)
@@ -779,12 +782,12 @@ paratraceplot.fsvdraws <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows
    plot.new()
    text(.5, .7, paste("Parameter draws of idiosyncratic log-variances with plotthin =", thinning), cex = 1.5, xpd = TRUE)
   }
-  
+
   plot(x$para[1,j,plotwhich], type = "l", main = "", xlab = "", ylab = "", yaxt = 'n', xaxt = 'n')
   if (!is.null(fsvsimobj)) {
    abline(h = fsvsimobj$idipara[j,1], col = 3, lty = 2)
   }
-  
+
   if (j %% effrows == 1) axis(3)
   axis(2)
   mtext(bquote(mu[.(j)]), 2, las = 2, line = 1.7)
@@ -796,12 +799,12 @@ paratraceplot.fsvdraws <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows
   axis(4)
   mtext(bquote(phi[.(j)]), 2, las = 2, line = 1.7)
   mtext(snames[j], 2, las = 2, line = 3.7)
-  
+
   plot(x$para[3,j,plotwhich], type = "l", main = "", xlab = "", ylab = "", yaxt = 'n', xaxt = 'n')
   if (!is.null(fsvsimobj)) {
    abline(h = fsvsimobj$idipara[j,3], col = 3, lty = 2)
   }
-  
+
   axis(2)
   mtext(bquote(sigma[.(j)]), 2, las = 2, line = 1.7)
 
@@ -809,7 +812,7 @@ paratraceplot.fsvdraws <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows
    axis(1)
    plot.new()
   }
- 
+
   plot.new()
  }
 
@@ -817,13 +820,15 @@ paratraceplot.fsvdraws <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows
  invisible(x)
 }
 
+#' @export paratraceplot
+NULL
 
 #' Trace plots of factor loadings draws
 #'
 #' \code{facloadtraceplot} draws trace plots of the factor loadings. Can be
 #' an important tool to check MCMC convergence if inference about (certain)
 #' factor loadings sought.
-#' 
+#'
 #' @param x Object of class \code{'fsvdraws'}, usually resulting from a call
 #' to \code{\link{fsvsample}}.
 #' @param fsvsimobj To indicate data generating values in case of simulated
@@ -833,9 +838,9 @@ paratraceplot.fsvdraws <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows
 #' @param maxrows Indicates the maximum number of rows to be drawn per page.
 #' @param ylim Vector of length two containing lower and upper bounds of the
 #' vertical axis. If \code{NULL}, these are automatically determined.
-#' 
+#'
 #' @return Returns \code{x} invisibly.
-#' 
+#'
 #' @family plotting
 #'
 #' @export
@@ -852,7 +857,7 @@ facloadtraceplot <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows = 10,
  if (is.null(thinning)) thinning <- ceiling(draws/10000)
  plotwhich <- seq(1, draws, by = thinning)
  snames <- colnames(x$y)
- 
+
  if (!is.null(fsvsimobj)) {
   if (!is(fsvsimobj, "fsvsim")) stop("If provided, argument 'fsvsimobj' must be an 'fsvsim' object.")
   rtrue <- ncol(fsvsimobj$facload)
@@ -861,7 +866,7 @@ facloadtraceplot <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows = 10,
  oldpar <- par(mgp = c(2, .5, 0), mar = c(0.1, 6, 0.1, 2))
  effrows <- min(r, maxrows)
  layout(matrix(1:(effrows+2), nrow = effrows+2), heights = c(.075, rep(.9/effrows, effrows), .025))
- 
+
  for (i in 1:m) {
   for (j in 1:r) {
    if (j %% effrows == 1 | effrows == 1) {
@@ -895,7 +900,7 @@ facloadtraceplot <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows = 10,
 #'
 #' \code{facloaddensplot} draws kernel smoothed density plots of the marginal
 #' factor loadings posterior.
-#' 
+#'
 #' @param x Object of class \code{'fsvdraws'}, usually resulting from a call
 #' to \code{\link{fsvsample}}.
 #' @param fsvsimobj To indicate data generating values in case of simulated
@@ -905,9 +910,9 @@ facloadtraceplot <- function(x, fsvsimobj = NULL, thinning = NULL, maxrows = 10,
 #' @param thesecols Which factor loadings columns should be plotted? Defaults to 1:r.
 #' @param xlim Vector of length two containing lower and upper bounds of the
 #' horizontal axis. If \code{NULL}, these are automatically determined.
-#' 
+#'
 #' @return Returns \code{x} invisibly.
-#' 
+#'
 #' @family plotting
 #'
 #' @export
@@ -924,7 +929,7 @@ facloaddensplot <- function(x, fsvsimobj = NULL, rows = 5, thesecols = NULL, xli
  } else {
   ident <- rep(0, r)
  }
- 
+
  if (r > 1 && all(x$facload[1,2,] == 0)) restrict = "upper" else restrict = "none"
 
  snames <- colnames(x$y)
@@ -975,9 +980,9 @@ facloaddensplot <- function(x, fsvsimobj = NULL, rows = 5, thesecols = NULL, xli
 #' data, pass an object of type \code{fsvsim} (usually the result of a
 #' call to \code{\link{fsvsim}}).
 #' @param ... Other arguments will be passed on to the subfunctions.
-#' 
+#'
 #' @return Returns \code{x} invisibly.
-#' 
+#'
 #' @family plotting
 #'
 #' @export
@@ -1004,9 +1009,9 @@ plotalot <- function(x, fsvsimobj = NULL, ...) {
 #' call to \code{\link{fsvsim}}).
 #' @param col Optional color palette.
 #' @param ... Other arguments will be passed on to \link[corrplot]{corrplot}.
-#' 
+#'
 #' @return Returns \code{x} invisibly.
-#' 
+#'
 #' @family plotting
 #'
 #' @export
@@ -1016,7 +1021,7 @@ plot.fsvdraws <- function(x, quantiles = c(.05, .5, .95), col = NULL, fsvsimobj 
   if (!is(fsvsimobj, "fsvsim")) stop("If provided, argument 'fsvsimobj' must be an 'fsvsim' object.")
  }
  if (is.null(col)) {
-  colpal <- colorRampPalette(c("#67001F", "#B2182B", "#D6604D", "#F4A582", "#FDDBC7", 
+  colpal <- colorRampPalette(c("#67001F", "#B2182B", "#D6604D", "#F4A582", "#FDDBC7",
     "#FFFFFF", "#D1E5F0", "#92C5DE", "#4393C3", "#2166AC", "#053061"))
   col <- rev(colpal(200))
  }
@@ -1025,6 +1030,10 @@ plot.fsvdraws <- function(x, quantiles = c(.05, .5, .95), col = NULL, fsvsimobj 
  m <- ncol(x$y)
 
  mycormat <- cormat(x, "last")[,,,1]
+ 
+ # a new version corrplot requires rownames and colnames to be set
+ if (is.null(rownames(mycormat))) rownames(mycormat) <- colnames(mycormat) <- seq_len(m)
+
  if (length(quantiles) == 1) {
    plotCI <- "n"
    mycormatlower <- NULL
@@ -1038,7 +1047,7 @@ plot.fsvdraws <- function(x, quantiles = c(.05, .5, .95), col = NULL, fsvsimobj 
  } else {
    stop("Length of argument 'quantiles' must be one or three.")
  }
- 
+
  corrplot::corrplot(mycormatmed, plotCI = plotCI, lowCI.mat = mycormatlower, uppCI.mat = mycormatupper, col = col)
 
  if (!is.null(fsvsimobj)) {
@@ -1070,7 +1079,7 @@ plot.fsvdraws <- function(x, quantiles = c(.05, .5, .95), col = NULL, fsvsimobj 
 #' @param ... Other arguments will be passed on to \code{\link[stats]{ts.plot}}.
 #'
 #' @return Returns \code{x} invisibly.
-#' 
+#'
 #' @family plotting
 #'
 #' @export
@@ -1118,7 +1127,7 @@ corplot <- function(x, fsvsimobj = NULL, these = 1:(ncol(x$y)*(ncol(x$y)-1)/2), 
   title(paste0("Estimated correlation of series ", whiches[2], " (",
 	       snames[whiches[2]], ") and series ", whiches[1], " (",
 	       snames[whiches[1]], ") (mean +/- 2sd)"))
-  
+
   if (!is.null(fsvsimobj)) {
    lines(corelement(fsvsimobj, whiches[1], whiches[2], these = times), col = 3)
   }
@@ -1141,7 +1150,7 @@ corplot <- function(x, fsvsimobj = NULL, these = 1:(ncol(x$y)*(ncol(x$y)-1)/2), 
 #'
 #' @return Invisibly returns a matrix with posterior samples of the eigenvalues of
 #' crossprod(facload)
-#' 
+#'
 #' @family plotting
 #'
 #' @importFrom graphics boxplot
@@ -1156,7 +1165,7 @@ evdiag <- function(x) {
   dim(tmp) <- c(dim(tmp)[1], dim(tmp)[2])
   d[i,] <- svd(crossprod(tmp))$d
  }
- 
+
  xs <- seq_len(dim(l)[2])
  ys <- colMeans(d)
  boxplot(d, border = "grey", main = "Eigenvalues of crossprod(facload)",
