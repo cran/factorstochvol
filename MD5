@@ -1,6 +1,6 @@
-04cbe6cd74e60f218b185688422f7e51 *DESCRIPTION
+ed6f3f7ca3b8e488753c6a1380585abf *DESCRIPTION
 99263c467d59a03178d9362d742b084d *NAMESPACE
-ee423456513d5c2c6053f1ef17365da3 *NEWS
+ac23c7f0b706e9cc0c93c0f7fdea2a04 *NEWS
 1c4e30534f0e667fef17331300503999 *R/factorstochvol-package.R
 205e74465c36c810bc91b04aeb6464df *R/generics.R
 682dfd40e2f52dd381020803a4f32f62 *R/imports.R
@@ -11,11 +11,11 @@ a354160a1264c093be0b10be34403a51 *R/utilities_fsvdraws.R
 84126a3945ecd262f30300609626c64d *R/utilities_other.R
 374ace16fe3d9076d7511637bb3df177 *R/wrappers.R
 a1201907f4e2505d396276af4153c48b *R/zzz.R
-9ef5e61068650ce872759c75bef8bf30 *build/partial.rdb
+5dcc5b376b46cf09c77a6025dcc10db5 *build/partial.rdb
 4ce6521b89c15ddc30443f21110f4d03 *build/vignette.rds
-a038ffa53ce16c56d6a0c000ff7840db *inst/CITATION
+dde64a306b5af50d891d7548ee3cf688 *inst/CITATION
 19abe7ca70564a74dff4534cc0c3cc9c *inst/doc/paper.Rtex
-14717e2cd9d96e2d9eefe5ba24b048a5 *inst/doc/paper.pdf
+72483e8a36b8db899ca08e16bbc01108 *inst/doc/paper.pdf
 88aade0f53a4d976f35e90e00076a066 *man/comtimeplot.Rd
 a8b10aaf0884a304698bb6f53aaa23be *man/corelement.Rd
 31765032039ecd24b0283587539026a7 *man/corimageplot.Rd
@@ -68,7 +68,7 @@ b870c5ab26c80d44ec24bf2d3a2fa355 *src/predict.h
 b5a6625117879a02b02508491a50b322 *src/progutils.cpp
 e86faf41cb100fa9c7c40993ad356a1a *src/progutils.h
 de96292870f3bc20f184b7567f7e19b4 *src/register.cpp
-303519e84a9fc4970d28abeb3dc6d7d8 *src/sampler.cpp
+c3ab3bc10c523b898f35a11e3cdf4f5d *src/sampler.cpp
 0be9cbfa075e93ad0d801adfffc4471e *src/sampler.h
 a8a7047b4585af1f6809fe4d02e2ca23 *src/testrgig.cpp
 ce174cc531867ffbe2b29c617f64143e *tests/testthat.R
