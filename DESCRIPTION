@@ -3,7 +3,7 @@ Package: factorstochvol
 Type: Package
 Title: Bayesian Estimation of (Sparse) Latent Factor Stochastic
         Volatility Models
-Version: 1.0.1
+Version: 1.0.2
 Authors@R: c(
 	person("Gregor", "Kastner", role = c("aut", "cre"), email = "gregor.kastner@aau.at", comment = c(ORCID = "0000-0002-8237-8271")),
 	person("Darjus", "Hosszejni", role = c("ctb"), email = "darjus.hosszejni@wu.ac.at", comment = c(ORCID = "0000-0002-3803-691X")),
@@ -16,14 +16,14 @@ Imports: GIGrvg (>= 0.4), Rcpp (>= 1.0.0), corrplot, methods,
 Suggests: LSD (>= 4.0-0), coda (>= 0.19-2), knitr, RColorBrewer,
         testthat (>= 2.1.0), zoo
 LinkingTo: Rcpp, RcppArmadillo (>= 0.9.900), stochvol
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.3
 BuildResaveData: best
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2021-12-07 08:16:06 UTC; grkastner
+Packaged: 2023-09-09 18:57:42 UTC; grkastner
 Author: Gregor Kastner [aut, cre] (<https://orcid.org/0000-0002-8237-8271>),
   Darjus Hosszejni [ctb] (<https://orcid.org/0000-0002-3803-691X>),
   Luis Gruber [ctb] (<https://orcid.org/0000-0002-2399-738X>)
 Maintainer: Gregor Kastner <gregor.kastner@aau.at>
 Repository: CRAN
-Date/Publication: 2021-12-07 09:00:02 UTC
+Date/Publication: 2023-09-09 21:30:02 UTC
