@@ -1,3 +1,10 @@
+Changes in version 1.0.6:
+  - Fixed incorrect use of itemize in .rd files. Thanks to Uwe Ligges for
+    a detailed explanation of the issue.
+
+Changes in version 1.0.5:
+  - Fixed some minor issues when test_check(ing) factorstochvol.
+
 Changes in version 1.0.2:
   - Fixed some issues when test_check(ing) factorstochvol. Thank to Brian
     Ripley for pointing this out.
