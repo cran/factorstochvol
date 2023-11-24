@@ -1025,12 +1025,12 @@ R> round(apply(cov_n, 1:2, coda::effectiveSize))
 \end{Sinput}
 \begin{Soutput}
      [,1] [,2] [,3] [,4] [,5] [,6]
-[1,] 1040 1106  317  584  931 1207
-[2,] 1106 1058  201  697  967 1105
-[3,]  317  201  793  222  170  145
-[4,]  584  697  222 1000  646  707
-[5,]  931  967  170  646 1000  891
-[6,] 1207 1105  145  707  891  986
+[1,]  883 1000  447  571  851  896
+[2,] 1000 1000  317  602  853  896
+[3,]  447  317  913  711  178  277
+[4,]  571  602  711 1120  802  629
+[5,]  851  853  178  802 1000  815
+[6,]  896  896  277  629  815 1000
 \end{Soutput}
 \end{Schunk}
 
@@ -1169,24 +1169,24 @@ R> round(apply(predcor1[,,,1], 1:2, mean), 2)
 \end{Sinput}
 \begin{Soutput}
      AUD  CAD   CHF   CZK  DKK  GBP
-AUD 1.00 0.63  0.00  0.02 0.10 0.47
-CAD 0.63 1.00  0.08  0.01 0.12 0.53
+AUD 1.00 0.63  0.00  0.03 0.10 0.47
+CAD 0.63 1.00  0.08  0.01 0.11 0.52
 CHF 0.00 0.08  1.00 -0.03 0.03 0.09
-CZK 0.02 0.01 -0.03  1.00 0.00 0.01
-DKK 0.10 0.12  0.03  0.00 1.00 0.09
-GBP 0.47 0.53  0.09  0.01 0.09 1.00
+CZK 0.03 0.01 -0.03  1.00 0.00 0.01
+DKK 0.10 0.11  0.03  0.00 1.00 0.09
+GBP 0.47 0.52  0.09  0.01 0.09 1.00
 \end{Soutput}
 \begin{Sinput}
 R> round(apply(predcor1[,,,1], 1:2, sd), 2)
 \end{Sinput}
 \begin{Soutput}
      AUD  CAD  CHF  CZK  DKK  GBP
-AUD 0.00 0.15 0.16 0.03 0.07 0.16
+AUD 0.00 0.15 0.18 0.03 0.08 0.17
 CAD 0.15 0.00 0.14 0.02 0.08 0.17
-CHF 0.16 0.14 0.00 0.03 0.04 0.11
-CZK 0.03 0.02 0.03 0.00 0.01 0.02
-DKK 0.07 0.08 0.04 0.01 0.00 0.07
-GBP 0.16 0.17 0.11 0.02 0.07 0.00
+CHF 0.18 0.14 0.00 0.04 0.04 0.12
+CZK 0.03 0.02 0.04 0.00 0.01 0.02
+DKK 0.08 0.08 0.04 0.01 0.00 0.07
+GBP 0.17 0.17 0.12 0.02 0.07 0.00
 \end{Soutput}
 \end{Schunk}
 
@@ -1218,7 +1218,7 @@ R> predloglik(res, matrix(0, nrow = 2, ncol = m), ahead = 1:2, each = 10)
 \end{Sinput}
 \begin{Soutput}
        1        2 
-5.116045 5.090207 
+5.094878 5.064810 
 \end{Soutput}
 \end{Schunk}
 For a more detailed analysis of the out-of-sample performance of \factorstochvol{} for exchange rate data, we refer to \cite{kastner2017efficient}; for a predictive exercise on stock market data, please see \cite{kastner2019sparse}.
