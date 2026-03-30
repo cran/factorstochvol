@@ -3,10 +3,10 @@ Package: factorstochvol
 Type: Package
 Title: Bayesian Estimation of (Sparse) Latent Factor Stochastic
         Volatility Models
-Version: 1.1.1
+Version: 1.1.2
 Authors@R: c(
 	person("Gregor", "Kastner", role = c("aut", "cre"), email = "gregor.kastner@aau.at", comment = c(ORCID = "0000-0002-8237-8271")),
-	person("Darjus", "Hosszejni", role = c("ctb"), email = "darjus.hosszejni@wu.ac.at", comment = c(ORCID = "0000-0002-3803-691X")),
+	person("Darjus", "Hosszejni", role = c("ctb"), email = "darjus.hosszejni@icloud.com", comment = c(ORCID = "0000-0002-3803-691X")),
 	person("Luis", "Gruber", role = c("ctb"), email = "luis.gruber@aau.at", comment = c(ORCID = "0000-0002-2399-738X")))
 Description: Markov chain Monte Carlo (MCMC) sampler for fully Bayesian estimation of latent factor stochastic volatility models with interweaving <doi:10.1080/10618600.2017.1322091>. Sparsity can be achieved through the usage of Normal-Gamma priors on the factor loading matrix <doi:10.1016/j.jeconom.2018.11.007>.
 License: GPL (>= 2)
@@ -19,13 +19,13 @@ LinkingTo: Rcpp, RcppArmadillo (>= 0.9.900), stochvol
 BuildResaveData: best
 VignetteBuilder: knitr
 BugReports: https://github.com/gregorkastner/factorstochvol/issues
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 NeedsCompilation: yes
-Packaged: 2026-03-02 09:32:00 UTC; grkastner
+Packaged: 2026-03-30 09:06:32 UTC; grkastner
 Author: Gregor Kastner [aut, cre] (ORCID:
     <https://orcid.org/0000-0002-8237-8271>),
   Darjus Hosszejni [ctb] (ORCID: <https://orcid.org/0000-0002-3803-691X>),
   Luis Gruber [ctb] (ORCID: <https://orcid.org/0000-0002-2399-738X>)
 Maintainer: Gregor Kastner <gregor.kastner@aau.at>
 Repository: CRAN
-Date/Publication: 2026-03-02 10:10:03 UTC
+Date/Publication: 2026-03-30 10:00:02 UTC

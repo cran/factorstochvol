@@ -1,8 +1,8 @@
 /*
  * R package stochvol by
- *     Gregor Kastner Copyright (C) 2016-2021
- *     Darjus Hosszejni Copyright (C) 2019-2021
- *     Luis Gruber Copyright (C) 2021
+ *     Gregor Kastner Copyright (C) 2016-
+ *     Darjus Hosszejni Copyright (C) 2019-
+ *     Luis Gruber Copyright (C) 2021-
  *
  *  This file is part of the R package factorstochvol: Bayesian Estimation
  *  of (Sparse) Latent Factor Stochastic Volatility Models
@@ -31,17 +31,6 @@
 #include "progutils.h"
 #include "update_fsv.h"
 
-double rgig1(double, double, double);
 double do_rgig1(double lambda, double chi, double psi);
-
-// Main sampler (as called from R)
-RcppExport SEXP sampler(const SEXP, const SEXP, const SEXP,
-                        const SEXP, const SEXP, const SEXP, const SEXP, const SEXP,
-                        const SEXP, const SEXP, const SEXP, const SEXP, const SEXP,
-                        const SEXP, const SEXP, const SEXP, const SEXP, const SEXP,
-                        const SEXP, const SEXP, const SEXP, const SEXP, const SEXP,
-                        const SEXP, const SEXP, const SEXP, const SEXP, const SEXP,
-                        const SEXP, const SEXP, const SEXP, const SEXP, const SEXP,
-                        const SEXP, const SEXP);
 
 #endif

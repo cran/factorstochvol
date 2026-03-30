@@ -1,8 +1,8 @@
 /*
  * R package stochvol by
- *     Gregor Kastner Copyright (C) 2016-2021
- *     Darjus Hosszejni Copyright (C) 2019-2021
- *     Luis Gruber Copyright (C) 2021
+ *     Gregor Kastner Copyright (C) 2016-
+ *     Darjus Hosszejni Copyright (C) 2019-
+ *     Luis Gruber Copyright (C) 2021-
  *
  *  This file is part of the R package factorstochvol: Bayesian Estimation
  *  of (Sparse) Latent Factor Stochastic Volatility Models
@@ -28,7 +28,9 @@
 //#define ARMA_NO_DEBUG // disables bounds checks
 #include <RcppArmadillo.h>
 
+using namespace Rcpp;
+
 // Main predict function (as called from R):
-RcppExport SEXP predict(const SEXP, const SEXP, const SEXP);
+List predict(const List obj, const IntegerVector store, const int each);
 
 #endif
